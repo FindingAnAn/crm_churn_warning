@@ -1,0 +1,152 @@
+# ============================================================
+# kube-prometheus-stack — values.yaml
+# Tối ưu cho Docker Desktop (Windows) + containerd runtime
+# ============================================================
+
+coreDns:
+  enabled: true
+
+# Docker Desktop chặn các port này — disable để tắt alert noise
+kubeControllerManager:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+# ============================================================
+# Kubelet + cAdvisor
+# Fix: containerd runtime khiến label container="" rỗng
+# Giữ nguyên relabelings, KHÔNG drop container="" vì Docker Desktop
+# toàn bộ cAdvisor metrics đều có container="" — drop sẽ mất hết data
+# ============================================================
+kubelet:
+  enabled: true
+  serviceMonitor:
+    https: true
+    insecureSkipVerify: true
+    cAdvisor: true
+
+    relabelings:
+      - action: replace
+        sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+
+    cAdvisorRelabelings:
+      - action: replace
+        sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+
+# ============================================================
+# node-exporter
+# Fix: Docker Desktop cấm mount root filesystem
+# Lỗi gốc: path / is mounted on / but it is not a shared or slave mount
+# ============================================================
+prometheus-node-exporter:
+  hostRootFsMount:
+    enabled: false
+
+# ============================================================
+# kube-state-metrics
+# Cần thiết cho panels "from requests" và "from limits"
+# Thêm cpu limits để KSM sinh ra metric kube_pod_container_resource_limits
+# ============================================================
+kube-state-metrics:
+  enabled: true
+  metricLabelsAllowlist:
+    - pods=[*]
+    - nodes=[*]
+    - namespaces=[*]
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# ============================================================
+# Default rules — tắt các rule không áp dụng cho Docker Desktop
+# ============================================================
+defaultRules:
+  create: true
+  rules:
+    kubeApiserverAvailability: false
+    kubeApiserverSlos: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+    etcd: false
+    network: false
+
+# ============================================================
+# Alertmanager
+# ============================================================
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+
+# ============================================================
+# Grafana
+# ============================================================
+grafana:
+  enabled: true
+  adminPassword: "admin"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  persistence:
+    type: pvc
+    enabled: true
+    storageClassName: "hostpath"
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      folder: /var/lib/grafana/dashboards
+      searchNamespace: monitoring
+# ============================================================
+# Prometheus
+# Fix: limits phải nằm trong resources, không phải ngang cấp
+# ============================================================
+prometheus:
+  prometheusSpec:
+    replicas: 1
+    retention: 15d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+      limits:
+        cpu: 500m
+        memory: 800Mi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "hostpath"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi

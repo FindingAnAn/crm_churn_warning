@@ -1,0 +1,40 @@
+# Local K8s overrides for values.yaml
+# Intended for Docker Desktop K8s or Minikube
+
+executor: "KubernetesExecutor"
+
+# Override: local environment only needs 1 scheduler to save resources
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+
+workers:
+  kubernetes:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+
+
+webserver:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+
+# For local testing, GitSync might be annoying if pushing every change.
+# If you want to use HostPath mount for DAGs locally instead, UNCOMMENT the logic below:
+# dags:
+#   gitSync:
+#     enabled: false
+#   persistence:
+#     enabled: true
+#     existingClaim: "local-dags-pvc" # You must create this claim manually first
+
+logs:
+  persistence:
+    enabled: true
+    size: 1Gi

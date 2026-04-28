@@ -1,0 +1,42 @@
+# Base configuration for Apache Airflow on Kubernetes (shared across environments)
+# Follows conventions from 18-Observability_orchestration_conventions.md
+
+executor: "KubernetesExecutor"
+
+# Rule 8.4: Airflow scheduler must run with 2 replicas for HA
+# (Overridden to 1 in values-local.yaml to save local resources)
+scheduler:
+  replicas: 2
+
+# Images
+images:
+  airflow:
+    repository: churn_app_airflow
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Rule 8.3: DAGs must be synced via git-sync sidecar
+# Never use persistent volume mounts to manage DAG files in Kubernetes
+dags:
+  gitSync:
+    enabled: true
+    repo: "git@github.com:dangssss/Churn_Prediction.git"
+    branch: "master"
+    rev: "HEAD"
+    depth: 1
+    maxFailures: 3
+    subPath: "dags/"
+    sshKeySecret: "airflow-git-ssh-key"
+  persistence:
+    enabled: false
+
+# Rule 6.2: RBAC explicitly defined
+rbac:
+  create: true
+
+config:
+  core:
+    dags_are_paused_at_creation: 'True'
+    load_examples: 'False'
+  logging:
+    logging_level: 'INFO'

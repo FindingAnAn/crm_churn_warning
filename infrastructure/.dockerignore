@@ -1,0 +1,15 @@
+.git/
+.env
+*.env
+__pycache__/
+*.pyc
+tests/
+notebooks/
+artifacts/
+data/
+models/
+infrastructure/helm/
+infrastructure/docker-compose*.yaml
+venv/
+.venv/
+.vscode/

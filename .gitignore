@@ -1,0 +1,79 @@
+# ══════════════════════════════════════
+# ds_churn — .gitignore
+# ══════════════════════════════════════
+
+# ── Python ─────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+.eggs/
+
+# ── Virtual environments ──────────────
+venv/
+.venv/
+env/
+
+# ── IDE ────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Env files with real secrets ────────
+.env
+!.env.example
+config/.env.*
+
+# ── Data & Artifacts (.gitignored) ─────
+artifacts/
+/data/                  # root-level data/ only (CSV từ DE, local dev)
+!src/data/              # KEEP: src/data/ là Python source code
+logs/
+*.pkl
+*.joblib
+*.h5
+*.onnx
+*.parquet
+*.csv
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.xlxs
+*.zip
+*.rar
+*.7z
+
+# ── ML experiment tracking ─────────────
+mlruns/
+wandb/
+
+# ── OS files ───────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Notebook checkpoints ──────────────
+.ipynb_checkpoints/
+
+# ── AI Agent local state ──────────────
+# Claude Code: keep .claude/commands/ (shared slash commands)
+# but exclude all local runtime state
+.claude/settings.local.json
+.claude/worktrees/
+.claude/memory/
+.claude/*.lock
+.claude/statsig/
+.claude/todos/
+.claude/projects/
+# Antigravity / other agents
+.antigravity/
+.cursor/
+.windsurf/
+.aider/
+.continue/
+.codeium/
