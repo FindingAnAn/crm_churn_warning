@@ -1,6 +1,5 @@
 """Tests for src/config/ — configuration validation.
 
-Convention: 13-Data_ML §3.3 — validate config at startup.
 """
 
 from __future__ import annotations

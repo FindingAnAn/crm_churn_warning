@@ -1,6 +1,5 @@
 """Tests for evaluator — best_threshold_by_f1 and metric computation.
 
-Convention: 13-Data_ML §8.1 — metrics at threshold chosen by F1.
 """
 
 from __future__ import annotations

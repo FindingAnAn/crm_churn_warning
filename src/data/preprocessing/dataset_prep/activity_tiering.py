@@ -3,9 +3,6 @@
 Compute recency and assign customers to activity tiers
 (active / at_risk / churned) based on configurable thresholds.
 
-Conventions applied:
-  - 13-Data_ML §6.2: Isolated, stateless feature functions.
-  - 13-Data_ML §9.3: Returns new DataFrame, does not modify input in-place.
 """
 
 from __future__ import annotations
@@ -104,6 +101,7 @@ def compute_recency(
                 AS recency_days
         FROM public.cas_customer
         WHERE report_month >= :data_start
+          AND report_month <= :t_obs
         GROUP BY cms_code_enc
     """)
 

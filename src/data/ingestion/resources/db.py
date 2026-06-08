@@ -3,7 +3,6 @@
 This file delegates to config.db_config.PostgresConfig to avoid
 duplicating the PostgresConfig dataclass and hardcoded credentials.
 
-Convention: 08-Security §3.2 — no hardcoded credentials.
 """
 
 import psycopg2

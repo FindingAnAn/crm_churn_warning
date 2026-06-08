@@ -3,10 +3,6 @@
 Find the optimal window size W* by running expanding-window
 walk-forward validation with a logistic regression baseline.
 
-Conventions applied:
-  - 13-Data_ML §8.3: Compare against baseline before selecting.
-  - 13-Data_ML §8.4: Metrics logged per fold/split.
-  - 13-Data_ML §7.3: Random state controlled via seed parameter.
 """
 
 from __future__ import annotations

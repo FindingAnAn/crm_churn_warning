@@ -1,6 +1,5 @@
 """Tests for dataset_prep/pipeline_config.py — hyperparameter validation.
 
-Convention: 02-Config §6.1 — config must self-validate.
 """
 
 from __future__ import annotations
@@ -57,12 +56,19 @@ class TestDatasetPipelineConfig:
         with pytest.raises(ValueError, match="recency_active"):
             cfg.validate()
 
+    def test_invalid_eval_holdout_frac(self):
+        """eval_holdout_frac must stay in [0, 1)."""
+        cfg = DatasetPipelineConfig(eval_holdout_frac=1.0)
+        with pytest.raises(ValueError, match="eval_holdout_frac"):
+            cfg.validate()
+
     def test_to_safe_dict(self):
         """to_safe_dict() returns a logging-safe dictionary."""
         cfg = DatasetPipelineConfig()
         d = cfg.to_safe_dict()
         assert "horizon_months" in d
         assert "alpha_ewma" in d
+        assert "eval_holdout_frac" in d
         assert isinstance(d["data_start"], str)
 
 

@@ -1,7 +1,5 @@
 """Descriptive statistics for numeric features.
 
-Convention: 10-Code_design §2.1 — one coherent responsibility per function.
-Convention: 13-Data_ML §6.1 — snake_case feature names.
 """
 
 from __future__ import annotations

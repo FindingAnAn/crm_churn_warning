@@ -9,6 +9,7 @@ from sqlalchemy.engine import Engine
 
 from src.features.engineering.aggregation.window_features.chunk_checkpoint import execute_sql_pairs_in_chunks
 from src.features.engineering.aggregation.window_features.chunk_checkpoint import load_checkpoint
+from src.features.engineering.aggregation.window_features.lifetime_asof import render_and_run_lifetime_asof
 from src.features.engineering.aggregation.window_features.sql_builder import render_window_sqls
 from src.features.engineering.aggregation.window_features.stage_tables import WINDOW_BCCP_TABLE
 from src.features.engineering.aggregation.window_features.stage_tables import WINDOW_COMPLAINTS_TABLE
@@ -38,6 +39,10 @@ def render_and_run_all(
     window_group_size: int = 2,
     checkpoint_path: str | None = None,
     resume_from_checkpoint: bool = False,
+    build_lifetime_asof: bool = True,
+    lifetime_data_start: str = "2025-01-01",
+    feature_engine: str = "postgres",
+    spark_db_config: dict | None = None,
 ) -> dict[str, int]:
     logger.info(f"Starting window feature aggregation ({len(window_sizes)} sizes x {len(months)} months)")
 
@@ -118,6 +123,30 @@ def render_and_run_all(
 
     try:
         prepare_stage_tables(engine, full_start_date, full_end_date)
+        lifetime_count = 0
+        if build_lifetime_asof:
+            logger.info("Building leakage-safe lifetime tables for each computed window")
+            if feature_engine == "pyspark":
+                from src.features.engineering.aggregation.window_features.spark_lifetime_asof import (
+                    write_lifetime_asof_tables_with_spark,
+                )
+
+                if spark_db_config is None:
+                    raise ValueError("spark_db_config is required when feature_engine='pyspark'")
+                lifetime_count = write_lifetime_asof_tables_with_spark(
+                    specs_to_compute,
+                    spark_db_config,
+                    lifetime_data_start,
+                    logger,
+                )
+            else:
+                lifetime_count = render_and_run_lifetime_asof(
+                    engine,
+                    specs_to_compute,
+                    lifetime_data_start,
+                    logger,
+                )
+
         for spec in specs_to_compute:
             create_sql, insert_sql = render_window_sqls(
                 spec['table_name'],
@@ -157,6 +186,7 @@ def render_and_run_all(
             'new_tables': new_tables,
             'kept_tables': kept_tables,
             'completed_chunks': len(completed_chunk_ids),
+            'lifetime_asof_tables': lifetime_count,
         }
     finally:
         cleanup_stage_tables(engine)

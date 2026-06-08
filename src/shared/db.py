@@ -5,10 +5,6 @@ Merges duplicated logic from:
   - Preprocess/libs/database.py
   - Modeling/infra/db.py
 
-Conventions applied:
-  - 16-Architecture §7.4: Connection pooling.
-  - 02-Config §4.3: No os.getenv here — config comes from db_config.
-  - 08-Security §7.1: Never log connection strings with credentials.
 """
 
 from __future__ import annotations

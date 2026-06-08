@@ -1,4 +1,4 @@
-# Hướng dẫn Triển khai Hệ thống (Deployment Guide)
+﻿# Hướng dẫn Triển khai Hệ thống (Deployment Guide)
 
 > [!IMPORTANT]
 > Tài liệu này là "Nguồn chân lý" (Source of Truth) cho việc thiết lập môi trường Local và triển khai Production (Kubernetes/Helm). Mọi thay đổi về cấu trúc hạ tầng phải được cập nhật ngay tại đây.
@@ -23,15 +23,15 @@ Dành cho Data Scientist và Data Engineer test pipelines. Có 2 cách chạy Lo
 ### 2.1. Cách 1: Sử dụng Docker Compose (Nhanh, nhẹ)
 Phù hợp để test syntax DAG, test thao tác DB cơ bản.
 ```bash
-cd infrastructure
+cd infrastructure/docker
 echo -e "AIRFLOW_UID=$(id -u)" > .env
 # Khởi tạo DB & chạy ngầm
-docker-compose run --rm airflow-cli airflow db init
-docker-compose up -d --build
+docker compose run --rm airflow-cli airflow db init
+docker compose up -d --build
 ```
 > [!TIP]
 > - Truy cập Web UI: `http://localhost:8080` (`airflow`/`airflow`).
-> - Tắt: `docker-compose down --volumes --remove-orphans`.
+> - Tắt: `docker compose down --volumes --remove-orphans`.
 
 ### 2.2. Cách 2: Sử dụng K8s Local (Docker Desktop) - KHUYÊN DÙNG
 Đây là cách test chuẩn xác nhất vì nó mô phỏng 1:1 luồng `KubernetesPodOperator` trên Production (1 Task - 1 Container).
@@ -40,10 +40,10 @@ docker-compose up -d --build
 Tại thư mục gốc dự án:
 ```bash
 # 1. Build image ứng dụng cốt lõi (chứa code Machine Learning model, pipeline)
-docker build -t churn_app:latest -f infrastructure/Dockerfile.app .
+docker build -t churn_app:latest -f infrastructure/docker/Dockerfile.app .
 
 # 2. Build image tuỳ chỉnh của Airflow (cài sẵn provider K8s)
-docker build -t churn_app_airflow:latest -f infrastructure/Dockerfile.airflow .
+docker build -t churn_app_airflow:latest -f infrastructure/docker/Dockerfile.airflow .
 ```
 
 **Bước 2: Thiết lập K8s Secrets (Bắt buộc cho Local 1:1)**
@@ -77,8 +77,8 @@ kubectl port-forward svc/airflow-api-server 8080:8080 -n default
 ```
 Khi bạn bật DAG (vd: `ds_churn_pipeline`), K8s sẽ tự động sinh ra các Pod độc lập (tên dạng `churn-pipeline-v2-pod-xxxxx`) để chạy task tính toán và tắt đi sau khi hoàn tất.
 
-> [!NOTE] 
-> Lưu ý về OS Path: Nếu test local trên Docker Desktop Windows bằng tính năng `host_path` trong DAG Operator, bắt buộc dùng đường dẫn dạng Linux-node chuẩn: `/run/desktop/mnt/host/d/Churn_Prediction_Product/...` thay vì format ổ đĩa `D:\...` để tránh lỗi parse volume.
+> [!NOTE]
+> Lưu ý về OS Path: Không hard-code `host_path` trong DAG. Cấu hình qua Airflow Variable hoặc biến môi trường `CHURN_DATA_HOST_PATH`; nếu test local trên Docker Desktop Windows thì giá trị thường có dạng Linux-node như `/run/desktop/mnt/host/d/...`.
 **Bước 5: Cài đặt Giám sát (Prometheus & Grafana)**
 Trên hệ thống máy ảo độc lập, chúng ta cần cài đặt Stack Giám sát để theo dõi tài nguyên RAM/CPU nếu không sẽ bị mù thông tin.
 ```bash
@@ -127,3 +127,4 @@ helm upgrade --install airflow apache-airflow/airflow \
 - **Lỗi `git-sync`:** Pod báo `Init:CrashLoopBackOff`, kiểm tra lại SSH Key Secret có quyền đọc repo không.
 - **Tiết kiệm tài nguyên:** Các task nặng chạy qua `KubernetesPodOperator` (dùng image `churn_app`) sẽ tự giải phóng Node Memory ngay sau khi hoàn tất.
 - Tham khảo thêm Alert và Dashboard tại `docs/operations/monitoring_guide.md`.
+

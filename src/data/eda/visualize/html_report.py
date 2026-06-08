@@ -3,8 +3,6 @@
 The report uses inline CSS and base64-encoded chart images,
 so it can be opened in any browser without external dependencies.
 
-Convention: 10-Code_design §3.1 — single responsibility.
-Convention: 13-Data_ML §9.1 — idempotent output.
 """
 
 from __future__ import annotations

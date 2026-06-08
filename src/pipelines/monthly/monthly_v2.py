@@ -4,8 +4,6 @@ Consumes DatasetResult from dataset_prep, trains XGBoost, evaluates,
 applies guardrail + accept/reject, scores all active customers,
 exports risk table, and logs monitoring metrics.
 
-Convention: 01-Structure §6.2 — application layer orchestrates workflow.
-Convention: 13-Data_ML §9.2 — explicit step boundaries.
 """
 
 from __future__ import annotations

@@ -1,6 +1,5 @@
 """DDL for the ``eda_reports`` schema.
 
-Convention: follows the pattern in
 ``monitoring.model_quality.monitoring.ddl.ensure_monitoring_schema``.
 """
 

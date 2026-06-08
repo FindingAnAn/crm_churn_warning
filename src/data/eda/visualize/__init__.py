@@ -1,6 +1,5 @@
 """EDA visualization package.
 
-Convention: 01-Structure §7.3 — visualization under src/data/eda/.
 """
 
 from data.eda.visualize.charts import render_all_charts

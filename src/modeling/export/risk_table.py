@@ -1,7 +1,5 @@
 """Risk table DDL and insert logic.
 
-Convention: 13-Data_ML §9.1 — idempotent DDL (IF NOT EXISTS).
-Convention: 08-Security §3 — no hardcoded credentials.
 """
 
 from __future__ import annotations

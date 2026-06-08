@@ -12,6 +12,7 @@ dist/
 build/
 *.whl
 .eggs/
+.pytest_cache/
 
 # ── Virtual environments ──────────────
 venv/
@@ -56,6 +57,7 @@ wandb/
 # ── OS files ───────────────────────────
 .DS_Store
 Thumbs.db
+*.exe
 
 # ── Notebook checkpoints ──────────────
 .ipynb_checkpoints/

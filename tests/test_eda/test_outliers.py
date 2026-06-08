@@ -1,6 +1,5 @@
 """Tests for outlier detection.
 
-Convention: 07-Testing §3 — Arrange-Act-Assert.
 """
 
 from __future__ import annotations

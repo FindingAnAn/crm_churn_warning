@@ -3,9 +3,6 @@
 Assign pseudo-labels to active-tier customers based on
 similarity scores, EWMA trends, and confirmed CSKH data.
 
-Conventions applied:
-  - 13-Data_ML §6.2: Stateless function.
-  - 13-Data_ML §9.3: Returns new DataFrame.
 """
 
 from __future__ import annotations
@@ -29,6 +26,7 @@ def assign_pseudo_labels(
     sim_threshold: float,
     recency_reliable_neg: int,
     trend_down_ratio: float = 0.85,
+    holdout_eval_ids: set[str] | None = None,
 ) -> pd.DataFrame:
     """Assign pseudo-labels to active-tier accounts.
 
@@ -42,16 +40,21 @@ def assign_pseudo_labels(
         active_df: DataFrame of active-tier accounts (must have ewma,
             delta_ewma, recency_days, item_avg, item_last columns).
         prototype: Prototype dict from ``build_leading_prototype``.
-        eval_ids: Set of confirmed churn CMS codes.
+        eval_ids: Set of confirmed churn CMS codes available for training
+            and prototype construction.
         sim_threshold: Threshold for similarity-based pseudo-churn.
         recency_reliable_neg: Max recency_days for reliable negative.
         trend_down_ratio: Ratio threshold for trend_down condition
             (item_last < item_avg * ratio). Default 0.85.
+        holdout_eval_ids: Confirmed churn IDs reserved for evaluation only.
+            These IDs are labeled as ``confirmed_eval`` and excluded from
+            training downstream.
 
     Returns:
         DataFrame with ``sim_score``, ``label_source`` columns added.
     """
     result = active_df.copy()
+    holdout_eval_ids = holdout_eval_ids or set()
 
     # Compute similarity scores
     result["sim_score"] = compute_similarity(result, prototype)
@@ -76,8 +79,9 @@ def assign_pseudo_labels(
     result.loc[pseudo_churn, "label_source"] = "pseudo_churn"
     result.loc[reliable_neg, "label_source"] = "reliable_neg"
 
-    # Override with confirmed (eval set — highest priority)
+    # Override with confirmed training labels and strict eval holdout labels.
     result.loc[result["cms_code_enc"].isin(eval_ids), "label_source"] = "confirmed"
+    result.loc[result["cms_code_enc"].isin(holdout_eval_ids), "label_source"] = "confirmed_eval"
 
     label_counts = result["label_source"].value_counts()
     logger.info("Pseudo-label distribution: %s", label_counts.to_dict())

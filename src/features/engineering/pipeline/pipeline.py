@@ -98,6 +98,16 @@ def run(args: argparse.Namespace) -> None:
             window_group_size=window_group_size,
             checkpoint_path=step6_checkpoint,
             resume_from_checkpoint=resume_window_step6,
+            build_lifetime_asof=cfg.features.build_lifetime_asof,
+            lifetime_data_start=cfg.features.static_data_start_date,
+            feature_engine=cfg.features.feature_engine,
+            spark_db_config={
+                "host": cfg.database.host,
+                "port": cfg.database.port,
+                "dbname": cfg.database.dbname,
+                "user": cfg.database.user,
+                "password": cfg.database.password,
+            },
         )
         logger.info("[OK] Window features aggregation complete")
 

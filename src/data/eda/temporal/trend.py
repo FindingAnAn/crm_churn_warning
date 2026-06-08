@@ -1,6 +1,5 @@
 """Feature trend detection across monthly snapshots.
 
-Convention: 10-Code_design §2.1 — one coherent responsibility.
 """
 
 from __future__ import annotations

@@ -2,7 +2,6 @@
 
 Provides IQR-based and z-score-based outlier counts per feature.
 
-Convention: 10-Code_design §2.1 — one coherent responsibility.
 """
 
 from __future__ import annotations

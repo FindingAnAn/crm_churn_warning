@@ -3,12 +3,6 @@
 All hyperparameters and thresholds from the notebook CONFIG BLOCK
 are centralized here as a typed, validated Pydantic model.
 
-Conventions applied:
-  - 02-Config §3.1: One config per subsystem.
-  - 02-Config §5.1: Strong typing.
-  - 02-Config §6.1: Self-validating.
-  - 13-Data_ML §7.2: Hyperparameters through config, not hardcoded.
-  - 13-Data_ML §9.4: Pipeline config externalized.
 """
 
 from __future__ import annotations
@@ -89,6 +83,10 @@ class DatasetPipelineConfig:
     # ── Prototype ─────────────────────────────────────────
     min_prototype_samples: int = 10
 
+    # ── Leakage-safe evaluation ───────────────────────────
+    eval_holdout_frac: float = 0.20
+    random_seed: int = 42
+
     # ── CSKH file ─────────────────────────────────────────
     cskh_file_path: Path | None = None
     cskh_dir: Path | None = None
@@ -118,6 +116,8 @@ class DatasetPipelineConfig:
             raise ValueError(
                 f"recency_active ({self.recency_active}) must be < recency_at_risk ({self.recency_at_risk})"
             )
+        if not (0 <= self.eval_holdout_frac < 1):
+            raise ValueError(f"eval_holdout_frac must be in [0, 1), got {self.eval_holdout_frac}")
 
     def to_safe_dict(self) -> dict:
         """Return config as a logging-safe dictionary."""
@@ -131,11 +131,12 @@ class DatasetPipelineConfig:
             "recency_at_risk": self.recency_at_risk,
             "alpha_ewma": self.alpha_ewma,
             "sim_threshold": self.sim_threshold,
+            "eval_holdout_frac": self.eval_holdout_frac,
+            "random_seed": self.random_seed,
         }
 
 
 # ── Numeric features list (from notebook) ─────────────────
-# Convention: 13-Data_ML §6.1 — snake_case, prefixed by domain.
 NUMERIC_FEATURES: list[str] = [
     "item_sum",
     "item_avg",

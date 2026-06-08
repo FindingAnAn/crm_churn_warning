@@ -1,6 +1,5 @@
 """Tests for scorer — compute_score_stats and compute_reasons.
 
-Convention: 10-Code_design §3.1 — single-responsibility functions.
 """
 
 from __future__ import annotations

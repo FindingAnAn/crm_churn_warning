@@ -3,8 +3,6 @@
 Usage (from Docker / Airflow KubernetesPodOperator):
     python -m data.eda.run_eda
 
-Convention: 01-Structure §6.2 — thin CLI, delegates to application layer.
-Convention: 08-Security §3 — credentials from env vars only.
 """
 
 from __future__ import annotations

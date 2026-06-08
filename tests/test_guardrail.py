@@ -1,6 +1,5 @@
 """Tests for guardrail checks — quality gates and accept/reject logic.
 
-Convention: 13-Data_ML §8.2 — minimum quality gates before deployment.
 """
 
 from __future__ import annotations

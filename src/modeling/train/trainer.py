@@ -1,8 +1,5 @@
 """XGBoost trainer — consumes DatasetResult from dataset_prep.
 
-Convention: 13-Data_ML §6.3 — scaler fitted on train only (done by dataset_prep).
-Convention: 13-Data_ML §9.1 — idempotent pipeline step.
-Convention: 10-Code_design §3.1 — single-responsibility function.
 """
 
 from __future__ import annotations

@@ -1,13 +1,5 @@
 """Database configuration.
 
-Conventions applied:
-  - 02-Config §3.1: One config object per subsystem (PostgresConfig).
-  - 02-Config §5.1: Strong typing — all fields explicitly typed.
-  - 02-Config §6.1: Self-validating config object.
-  - 02-Config §7.2: Derived value (dsn, sqlalchemy_url) masks password in safe_dict.
-  - 02-Config §9.2: Env vars uppercase with PG_ prefix.
-  - 08-Security §3.2: No hardcoded credentials.
-  - 08-Security §6.2: Safe defaults only for non-sensitive values.
 """
 
 from __future__ import annotations
@@ -96,7 +88,6 @@ class PostgresConfig:
     def to_safe_dict(self) -> dict[str, str | int]:
         """Return config dict with password masked (for logging/debug).
 
-        Convention: 08-Security §7.2 — redact sensitive data before output.
         """
         return {
             "host": self.host,

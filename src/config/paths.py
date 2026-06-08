@@ -1,11 +1,5 @@
 """File system path configuration.
 
-Conventions applied:
-  - 02-Config §3.1: One config per subsystem (FSConfig).
-  - 02-Config §5.2: Use Path for file paths.
-  - 02-Config §6.2: Validation must not mutate system state.
-  - 02-Config §9.2: Env vars uppercase with FS_ / MODEL_ prefix.
-  - 02-Config §10.2: Bootstrap (mkdir) is separate from validation.
 """
 
 from __future__ import annotations

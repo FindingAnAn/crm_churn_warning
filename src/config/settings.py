@@ -1,9 +1,5 @@
 """Root application settings — composes all subsystem configs.
 
-Conventions applied:
-  - 02-Config §3.2: One root config (AppSettings) composing subsystem configs.
-  - 02-Config §4.1: Centralized loading via get_settings().
-  - 02-Config §4.3: Only this module calls os.getenv / load_dotenv.
 """
 
 from __future__ import annotations

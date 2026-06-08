@@ -1,6 +1,5 @@
 """Tests for missing-value analysis.
 
-Convention: 07-Testing §3 — Arrange-Act-Assert.
 """
 
 from __future__ import annotations

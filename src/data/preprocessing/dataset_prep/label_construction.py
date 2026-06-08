@@ -3,10 +3,6 @@
 Build label (y_raw) from customer activity in the horizon period
 and construct training data from walk-forward windows.
 
-Conventions applied:
-  - 13-Data_ML §6.3: Data leakage prevention — labels from future H months only.
-  - 13-Data_ML §9.1: Idempotent — same input → same output.
-  - 13-Data_ML §9.2: Clear input/output boundaries.
 """
 
 from __future__ import annotations

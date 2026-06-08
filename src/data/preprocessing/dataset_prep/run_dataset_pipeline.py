@@ -8,11 +8,6 @@ Supports **fallback mode** when CSKH file is unavailable:
 - Pipeline still produces valid pseudo-labels and scores.
 - eval_ids will be empty → model evaluation is skipped downstream.
 
-Conventions applied:
-  - 13-Data_ML §9.1: Each step is idempotent.
-  - 13-Data_ML §9.2: Step boundaries are explicit.
-  - 13-Data_ML §9.4: Pipeline config externalized.
-  - 01-Structure §6.2: Application layer orchestrates workflow.
 """
 
 from __future__ import annotations
@@ -56,11 +51,12 @@ from data.preprocessing.dataset_prep.sample_weighting import (
     DatasetResult,
     apply_weights_and_smoothing,
     build_final_dataset,
+    split_confirmed_ids,
 )
 from data.preprocessing.dataset_prep.sanity_checks import run_sanity_checks
 from data.preprocessing.dataset_prep.scope_filter import (
     load_eval_ids,
-    load_working_set,
+    load_working_set_as_of,
 )
 from data.preprocessing.dataset_prep.walkforward import find_best_w
 
@@ -101,11 +97,17 @@ def run_dataset_pipeline(
     config.validate()
     logger.info("Pipeline config: %s", config.to_safe_dict())
 
+    data_start = pd.Timestamp(config.data_start)
+    t_obs = detect_t_obs(
+        engine,
+        data_start,
+        pd.Timestamp(config.t_obs_override) if config.t_obs_override else None,
+    )
+    t_obs_end = t_obs - pd.DateOffset(months=1)
+
     # ── Step 1: Scope filter + CSKH loading ───────────────
     logger.info("═" * 60)
     logger.info("STEP 1: Scope filter + CSKH loading")
-    working_df = load_working_set(engine, config.min_lifetime_orders)
-    working_ids = set(working_df["cms_code_enc"].astype(str))
 
     # 1a. Scan and load any new CSKH CSV files → DB
     if config.cskh_dir and Path(config.cskh_dir).exists():
@@ -114,15 +116,33 @@ def run_dataset_pipeline(
         for fname, n_rows in load_results.items():
             logger.info("  %s → %d rows", fname, n_rows)
 
-    # 1b. Load eval_ids: try file first, then DB
-    eval_ids = load_eval_ids(config.cskh_file_path, working_ids)
-    if not eval_ids:
-        logger.info("No eval_ids from file — trying DB (cskh.confirmed_churners)")
-        eval_ids = load_eval_ids_from_db(engine, working_ids)
+    # Scope is computed as-of the feature window end, not from all-time
+    # lifetime aggregates. This prevents future-activity look-ahead.
+    working_df = load_working_set_as_of(
+        engine,
+        config.min_lifetime_orders,
+        data_start,
+        t_obs_end,
+    )
+    working_ids = set(working_df["cms_code_enc"].astype(str))
 
-    has_cskh = len(eval_ids) > 0
+    # 1b. Load confirmed IDs: try file first, then DB
+    confirmed_ids = load_eval_ids(config.cskh_file_path, working_ids)
+    if not confirmed_ids:
+        logger.info("No confirmed IDs from file — trying DB (cskh.confirmed_churners)")
+        confirmed_ids = load_eval_ids_from_db(engine, working_ids)
+
+    prototype_ids, eval_ids = split_confirmed_ids(
+        confirmed_ids,
+        config.eval_holdout_frac,
+        config.random_seed,
+    )
+
+    has_cskh = len(confirmed_ids) > 0
     logger.info(
-        "CSKH result: %d confirmed IDs loaded (has_cskh=%s)",
+        "CSKH result: %d confirmed IDs loaded, %d prototype/train, %d eval holdout (has_cskh=%s)",
+        len(confirmed_ids),
+        len(prototype_ids),
         len(eval_ids),
         has_cskh,
     )
@@ -130,17 +150,11 @@ def run_dataset_pipeline(
     # ── Step 2: Activity tiering ──────────────────────────
     logger.info("═" * 60)
     logger.info("STEP 2: Activity tiering")
-    data_start = pd.Timestamp(config.data_start)
-    t_obs = detect_t_obs(
-        engine,
-        data_start,
-        pd.Timestamp(config.t_obs_override) if config.t_obs_override else None,
-    )
-    working_df = compute_recency(engine, working_df, t_obs, data_start)
+    working_df = compute_recency(engine, working_df, t_obs_end, data_start)
     working_df = assign_tiers(working_df, config.recency_active, config.recency_at_risk)
 
     # Compute PU weight
-    n_confirmed = len(eval_ids)
+    n_confirmed = len(prototype_ids)
     tier_counts = working_df["tier"].value_counts()
     n_active = tier_counts.get("active", 0)
 
@@ -167,7 +181,6 @@ def run_dataset_pipeline(
     logger.info("═" * 60)
     logger.info("STEP 3: Load features + EWMA")
     all_months = pd.date_range(data_start, t_obs, freq="MS")
-    t_obs_end = t_obs - pd.DateOffset(months=1)
 
     predict_window_df = load_window_features(engine, config.w_min, t_obs_end)
     if predict_window_df.empty:
@@ -211,7 +224,7 @@ def run_dataset_pipeline(
     # 5a. Try to build new prototype from CSKH data
     prototype = build_leading_prototype(
         engine,
-        eval_ids,
+        prototype_ids,
         t_obs,
         w_star,
         config.alpha_ewma,
@@ -276,10 +289,11 @@ def run_dataset_pipeline(
     active_df = assign_pseudo_labels(
         active_df,
         prototype,
-        eval_ids,
+        prototype_ids,
         config.sim_threshold,
         config.recency_reliable_neg,
         trend_down_ratio=config.trend_down_ratio,
+        holdout_eval_ids=eval_ids,
     )
 
     # Tag fallback mode in data for downstream awareness
@@ -295,7 +309,13 @@ def run_dataset_pipeline(
         config.label_smooth_eps_pseudo,
     )
 
-    result = build_final_dataset(active_df, training_history_df, eval_ids, NUMERIC_FEATURES)
+    result = build_final_dataset(
+        active_df,
+        training_history_df,
+        eval_ids,
+        NUMERIC_FEATURES,
+        random_seed=config.random_seed,
+    )
 
     # ── Sanity checks ─────────────────────────────────────
     logger.info("═" * 60)
@@ -334,7 +354,6 @@ def save_pipeline_artifacts(
 ) -> Path:
     """Save pipeline artifacts for reuse during inference.
 
-    Convention: 13-Data_ML §7.4 — model artifacts with consistent naming.
 
     Args:
         result: Pipeline output.

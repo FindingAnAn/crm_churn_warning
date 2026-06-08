@@ -1,6 +1,5 @@
 """Tests for pseudo_labeling — label assignment correctness.
 
-Convention: 13-Data_ML §6.2 — stateless functions testable in isolation.
 """
 
 from __future__ import annotations
@@ -43,6 +42,20 @@ class TestAssignPseudoLabels:
         confirmed = result[result["cms_code_enc"].isin(eval_ids)]
         assert (confirmed["label_source"] == "confirmed").all()
 
+    def test_holdout_confirmed_gets_eval_label(self):
+        """Holdout confirmed IDs should be labeled separately for eval only."""
+        df = self._make_active_df()
+        result = assign_pseudo_labels(
+            df,
+            prototype={},
+            eval_ids={"CMS_0"},
+            sim_threshold=0.5,
+            recency_reliable_neg=30,
+            holdout_eval_ids={"CMS_1"},
+        )
+        assert result.loc[result["cms_code_enc"] == "CMS_0", "label_source"].iloc[0] == "confirmed"
+        assert result.loc[result["cms_code_enc"] == "CMS_1", "label_source"].iloc[0] == "confirmed_eval"
+
     def test_no_overlap_between_categories(self):
         """Each row should have exactly one label_source."""
         df = self._make_active_df()
@@ -53,7 +66,7 @@ class TestAssignPseudoLabels:
             sim_threshold=0.5,
             recency_reliable_neg=30,
         )
-        valid_labels = {"confirmed", "pseudo_churn", "reliable_neg", "pu_unlabeled"}
+        valid_labels = {"confirmed", "confirmed_eval", "pseudo_churn", "reliable_neg", "pu_unlabeled"}
         assert set(result["label_source"].unique()).issubset(valid_labels)
 
     def test_adds_sim_score_column(self):

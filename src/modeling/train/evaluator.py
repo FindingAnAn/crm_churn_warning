@@ -1,7 +1,5 @@
 """Model evaluation — compute metrics on the eval set.
 
-Convention: 13-Data_ML §8.1 — metrics at threshold chosen by F1.
-Convention: 10-Code_design §3.1 — single-responsibility function.
 """
 
 from __future__ import annotations
@@ -46,6 +44,11 @@ def best_threshold_by_fbeta(
     if len(f_scores) == 0:
         return 0.5
     return float(thresholds[int(np.argmax(f_scores))])
+
+
+def best_threshold_by_f1(y_true: np.ndarray, y_prob: np.ndarray) -> float:
+    """Find the threshold that maximizes F1."""
+    return best_threshold_by_fbeta(y_true, y_prob, beta=1.0)
 
 
 def evaluate_model(

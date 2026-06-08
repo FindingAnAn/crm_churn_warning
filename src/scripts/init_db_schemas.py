@@ -8,7 +8,6 @@ Creates:
   - Schema ``data_static`` with tables: model_best_config, etc.
   - Schema ``data_window`` (empty, populated by feature generation)
 
-Convention: 02-Config §10.2 — Bootstrap is separate from validation.
 """
 
 from __future__ import annotations

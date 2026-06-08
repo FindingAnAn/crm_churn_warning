@@ -1,6 +1,5 @@
 """Tests for correlation analysis.
 
-Convention: 07-Testing §3 — Arrange-Act-Assert.
 """
 
 from __future__ import annotations

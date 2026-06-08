@@ -16,8 +16,10 @@ This module provides:
 """
 
 from .env_loader import parse_bool
+from .env_loader import parse_bool_default
 from .env_loader import parse_int
 from .env_loader import parse_optional_int
+from .env_loader import parse_str_default
 from .env_loader import require_env
 from .env_loader import load_project_env_files
 
@@ -64,6 +66,8 @@ class FeatureGenerationConfig:
     # Static feature settings
     enable_static_features: bool
     static_data_start_date: str
+    build_lifetime_asof: bool
+    feature_engine: str
     
     # Data retention
     keep_window_history: int  # Keep at least 2 versions of each window
@@ -83,6 +87,8 @@ class FeatureGenerationConfig:
             recompute_last_n_windows=parse_int('RECOMPUTE_LAST_N'),
             enable_static_features=parse_bool('ENABLE_STATIC_FEATURES'),
             static_data_start_date=require_env('STATIC_DATA_START'),
+            build_lifetime_asof=parse_bool_default('BUILD_LIFETIME_ASOF', True),
+            feature_engine=parse_str_default('FEATURE_ENGINE', 'postgres'),
             keep_window_history=parse_int('KEEP_WINDOW_HISTORY'),
             batch_insert_size=parse_int('BATCH_INSERT_SIZE'),
             parallel_render=parse_bool('PARALLEL_RENDER'),
@@ -157,6 +163,8 @@ class AppConfig:
             raise ValueError("window_sizes_min must be >= 1")
         if self.features.window_max_workers < 1:
             raise ValueError("window_max_workers must be >= 1")
+        if self.features.feature_engine not in {"postgres", "pyspark"}:
+            raise ValueError("feature_engine must be 'postgres' or 'pyspark'")
 
 
 # Global config instance

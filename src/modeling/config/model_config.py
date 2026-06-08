@@ -1,7 +1,5 @@
 """Model training configuration.
 
-Convention: 02-Config §3.1 — one config per subsystem.
-Convention: 13-Data_ML §7.2 — hyperparameters through config, not hardcoded.
 """
 
 from __future__ import annotations
@@ -63,7 +61,6 @@ class ModelConfig:
     def validate(self) -> None:
         """Validate configuration values.
 
-        Convention: 02-Config §6.1 — self-validating config.
         """
         if self.max_depth < 1:
             raise ValueError(f"max_depth must be >= 1, got {self.max_depth}")

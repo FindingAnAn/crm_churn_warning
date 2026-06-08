@@ -2,7 +2,6 @@
 
 Save a "healthy" reference state and compare future runs against it.
 
-Convention: follows prototype_cache pattern from
 ``data.preprocessing.dataset_prep.prototype_cache``.
 """
 

@@ -1,6 +1,5 @@
 """Tests for EdaConfig.
 
-Convention: 07-Testing §3 — test_should_<expected>_when_<condition>.
 """
 
 from __future__ import annotations

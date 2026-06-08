@@ -1,6 +1,5 @@
 """Tests for EWMA computation — stateless, vectorized.
 
-Convention: 13-Data_ML §6.2 — functions are stateless & testable in isolation.
 """
 
 from __future__ import annotations

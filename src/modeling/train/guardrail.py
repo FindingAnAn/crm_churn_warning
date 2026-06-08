@@ -1,6 +1,5 @@
 """Post-training guardrail checks.
 
-Convention: 13-Data_ML §8.2 — minimum quality gates before deployment.
 """
 
 from __future__ import annotations
@@ -15,41 +14,51 @@ def check_guardrail(
     *,
     min_f05: float = 0.10,
     min_pr_auc: float = 0.05,
+    min_f2: float | None = None,
+    min_roc_auc: float | None = None,
 ) -> tuple[bool, str]:
     """Check if model metrics meet minimum quality thresholds.
 
     Args:
-        metrics: Dict from evaluate_model (must contain 'f05', 'pr_auc').
+        metrics: Dict from evaluate_model.
         min_f05: Minimum acceptable F0.5 score.
         min_pr_auc: Minimum acceptable PR-AUC.
 
     Returns:
         Tuple of (passed: bool, reason: str).
     """
-    f05 = metrics.get("f05", 0.0)
-    pr_auc = metrics.get("pr_auc", 0.0)
+    score_key = "f05" if "f05" in metrics else "f2"
+    auc_key = "pr_auc" if "pr_auc" in metrics else "roc_auc"
+    score_label = "F0.5" if score_key == "f05" else "F2"
+    auc_label = "PR-AUC" if auc_key == "pr_auc" else "ROC-AUC"
+
+    score_min = min_f05 if min_f2 is None else min_f2
+    auc_min = min_pr_auc if min_roc_auc is None else min_roc_auc
+    score = metrics.get(score_key, 0.0)
+    auc = metrics.get(auc_key, 0.0)
 
     reasons = []
-    if f05 < min_f05:
-        reasons.append(f"F0.5={f05:.4f} < min_f05={min_f05}")
-    if pr_auc < min_pr_auc:
-        reasons.append(f"PR-AUC={pr_auc:.4f} < min_pr_auc={min_pr_auc}")
+    if score < score_min:
+        reasons.append(f"{score_label}={score:.4f} < min={score_min}")
+    if auc < auc_min:
+        reasons.append(f"{auc_label}={auc:.4f} < min={auc_min}")
 
     if reasons:
         msg = "GUARDRAIL FAILED: " + "; ".join(reasons)
         logger.warning(msg)
         return False, msg
 
-    msg = f"Guardrail passed: F0.5={f05:.4f} >= {min_f05}, PR-AUC={pr_auc:.4f} >= {min_pr_auc}"
+    msg = f"Guardrail passed: {score_label}={score:.4f} >= {score_min}, {auc_label}={auc:.4f} >= {auc_min}"
     logger.info(msg)
     return True, msg
 
 
 def check_accept_reject(
     new_f05: float,
-    prev_f05: float | None,
+    prev_f05: float | None = None,
     *,
     eps: float = 1e-6,
+    prev_f2: float | None = None,
 ) -> tuple[bool, str]:
     """Decide whether to accept the new model over the previous.
 
@@ -61,6 +70,9 @@ def check_accept_reject(
     Returns:
         Tuple of (accepted: bool, rule: str).
     """
+    if prev_f05 is None and prev_f2 is not None:
+        prev_f05 = prev_f2
+
     if prev_f05 is None:
         rule = "accepted_no_previous"
         logger.info("Accept decision: %s (first model)", rule)

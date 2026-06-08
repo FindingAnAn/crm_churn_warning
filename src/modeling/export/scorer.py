@@ -1,7 +1,5 @@
 """Scorer — predict churn probabilities on all active customers.
 
-Convention: 13-Data_ML §6.3 — inference uses same scaler as training.
-Convention: 10-Code_design §3.1 — single-responsibility.
 """
 
 from __future__ import annotations

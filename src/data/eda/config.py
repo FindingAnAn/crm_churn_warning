@@ -1,10 +1,5 @@
 """EDA configuration — single config per subsystem.
 
-Conventions applied:
-  - 02-Config §3.1: One config per subsystem.
-  - 02-Config §5.1: Strong typing via frozen dataclass.
-  - 02-Config §6.1: Self-validating.
-  - 13-Data_ML §9.4: Pipeline config externalized.
 """
 
 from __future__ import annotations

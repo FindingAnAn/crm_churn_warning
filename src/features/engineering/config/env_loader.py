@@ -49,8 +49,27 @@ def parse_bool(name: str) -> bool:
     raise ValueError(f"Invalid boolean value for {name}: {value}")
 
 
+def parse_bool_default(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None or value.strip() == "":
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    raise ValueError(f"Invalid boolean value for {name}: {value}")
+
+
 def parse_int(name: str) -> int:
     return int(require_env(name))
+
+
+def parse_str_default(name: str, default: str) -> str:
+    value = os.getenv(name)
+    if value is None or value.strip() == "":
+        return default
+    return value.strip()
 
 
 def parse_optional_int(name: str) -> int | None:

@@ -4,10 +4,6 @@ Compute Exponentially Weighted Moving Average and delta for multiple
 metric signals (item, revenue, complaint, delay, nodone, order,
 satisfaction) from monthly pivot columns in feature window tables.
 
-Conventions applied:
-  - 13-Data_ML §6.2: Isolated, stateless, independently testable.
-  - 13-Data_ML §6.4: Stateless by default — no internal state.
-  - 13-Data_ML §9.3: Returns new DataFrame, no in-place modification.
 """
 
 from __future__ import annotations

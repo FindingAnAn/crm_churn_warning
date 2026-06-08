@@ -1,6 +1,5 @@
 """Tests for sanity checks module.
 
-Convention: 13-Data_ML §3.3 — fail early on data quality issues.
 """
 
 from __future__ import annotations

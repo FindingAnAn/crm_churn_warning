@@ -3,9 +3,6 @@
 Build the leading prototype (μ_lead, Σ_lead) from confirmed churners'
 features at T-offset, then compute Mahalanobis-based similarity scores.
 
-Conventions applied:
-  - 13-Data_ML §6.2: Isolated, stateless functions.
-  - 13-Data_ML §6.4: No hidden internal state.
 """
 
 from __future__ import annotations

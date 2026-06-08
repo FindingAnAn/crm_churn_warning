@@ -1,7 +1,5 @@
 """EDA report assembly — orchestrate all analysis functions.
 
-Convention: 10-Code_design §2.1 — one coherent responsibility.
-Convention: 04-Typing §2.1 — typed dataclass for output.
 """
 
 from __future__ import annotations

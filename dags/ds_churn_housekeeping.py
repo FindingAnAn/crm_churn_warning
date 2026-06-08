@@ -7,8 +7,9 @@ from __future__ import annotations
 
 from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
-from kubernetes.client import models as k8s
 from pendulum import datetime
+
+from common import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
 
 # Housekeeping script nội dung
 HOUSEKEEPING_SCRIPT = '''
@@ -25,7 +26,7 @@ INCOMING_RETENTION_DAYS=${INCOMING_RETENTION_DAYS:-7}
 # CÁC ĐƯỜNG DẪN CHUẨN TRONG DOCKER CONTAINER
 BUNDLE_DIR="${CHURN_MODEL_DIR}/bundles"
 LOG_DIR="/opt/airflow/logs"
-DATA_ROOT="/churn_data"
+DATA_ROOT="${CHURN_DATA_ROOT:-/churn_data}"
 
 echo "=== DS_CHURN Housekeeping - $(date) ==="
 
@@ -99,21 +100,11 @@ with DAG(
     tags=["ds_churn", "maintenance"],
 ) as dag:
 
-    # Imports moved to module top per Convention 04 §4.1
-
     # Note: For logs sweeping, Airflow logs might be on a different PVC (or not needed locally if ephemeral pod)
     # But we mount /churn_data PVC to sweep bundles, saved, failed data.
-    volume = k8s.V1Volume(
-        name="churn-data-mount",
-        # prod: path="/data/churn_prediction/ftp_churn"
-        host_path=k8s.V1HostPathVolumeSource(path="/run/desktop/mnt/host/d/Churn_Prediction_Product/data")
-    )
-    volume_mount = k8s.V1VolumeMount(
-        name="churn-data-mount",
-        mount_path="/churn_data",
-        sub_path=None,
-        read_only=False
-    )
+    volume = churn_data_volume()
+    volume_mount = churn_data_mount()
+    data_root = volume_mount.mount_path
 
     housekeeping = KubernetesPodOperator(
         task_id="run_housekeeping_k8s",
@@ -122,10 +113,11 @@ with DAG(
         image="churn_app:latest",
         image_pull_policy="IfNotPresent",
         cmds=["/bin/bash", "-c", HOUSEKEEPING_SCRIPT],
-        env_vars={"CHURN_MODEL_DIR": "/churn_data/models"},
-        env_from=[
-            k8s.V1EnvFromSource(secret_ref=k8s.V1SecretEnvSource(name="churn-db-secret"))
-        ],
+        env_vars={
+            "CHURN_DATA_ROOT": data_root,
+            "CHURN_MODEL_DIR": get_setting("CHURN_MODEL_DIR", f"{data_root}/models"),
+        },
+        env_from=db_secret_ref(),
         volumes=[volume],
         volume_mounts=[volume_mount],
         is_delete_operator_pod=True,

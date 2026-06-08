@@ -3,8 +3,6 @@
 Each function takes EDA report data and returns a matplotlib Figure.
 Figures are self-contained and ready for embedding in HTML reports.
 
-Convention: 10-Code_design §3.1 — single-responsibility per function.
-Convention: 13-Data_ML §6.2 — stateless, no side effects.
 """
 
 from __future__ import annotations

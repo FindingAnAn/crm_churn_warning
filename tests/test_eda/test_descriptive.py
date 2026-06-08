@@ -1,6 +1,5 @@
 """Tests for descriptive statistics.
 
-Convention: 07-Testing §3 — Arrange-Act-Assert.
 """
 
 from __future__ import annotations

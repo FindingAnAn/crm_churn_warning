@@ -1,6 +1,5 @@
 """Tests for ModelConfig — validation, serialization, XGBoost params.
 
-Convention: 02-Config §6.1 — self-validating config.
 """
 
 from __future__ import annotations

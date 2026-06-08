@@ -4,9 +4,6 @@ Merges:
   - Ingestion/Data_pull/logging_config.py
   - Preprocess/logging_config.py
 
-Conventions applied:
-  - 06-Logging §4.7: Log once at boundary.
-  - 08-Security §7.1: Never log secrets.
 """
 
 from __future__ import annotations

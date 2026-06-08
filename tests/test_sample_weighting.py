@@ -1,6 +1,5 @@
 """Tests for sample_weighting — label smoothing and final dataset.
 
-Convention: 13-Data_ML §6.3 — scaler fitted on train only.
 """
 
 from __future__ import annotations
@@ -12,6 +11,7 @@ import pytest
 from data.preprocessing.dataset_prep.sample_weighting import (
     apply_weights_and_smoothing,
     build_final_dataset,
+    split_confirmed_ids,
 )
 
 
@@ -91,7 +91,7 @@ class TestBuildFinalDataset:
         })
         eval_ids = {"E0", "E1"}
 
-        result = build_final_dataset(df, eval_ids, ["feat_0", "feat_1"])
+        result = build_final_dataset(df, eval_ids, ["feat_0", "feat_1"], eval_unlabeled_frac=0.0)
 
         # Scaler mean should match train mean, NOT full dataset mean
         train_only = df[~df["cms_code_enc"].isin(eval_ids)]
@@ -108,6 +108,56 @@ class TestBuildFinalDataset:
             "sample_weight": [1, 1, 1, 1],
         })
         eval_ids = {"C", "D"}
-        result = build_final_dataset(df, eval_ids, ["feat_0"])
+        result = build_final_dataset(df, eval_ids, ["feat_0"], eval_unlabeled_frac=0.0)
         assert len(result.x_train) == 2
         assert len(result.x_eval) == 2
+
+    def test_rejects_horizon_feature(self):
+        """Future horizon columns must not enter the model feature list."""
+        df = pd.DataFrame({
+            "cms_code_enc": ["A", "B"],
+            "item_in_horizon": [0, 10],
+            "y_smooth": [0.0, 1.0],
+            "y_label": [0.0, 1.0],
+            "sample_weight": [1.0, 1.0],
+        })
+        with pytest.raises(ValueError, match="data leakage"):
+            build_final_dataset(df, set(), ["item_in_horizon"], eval_unlabeled_frac=0.0)
+
+    def test_historical_rows_use_y_raw_only(self):
+        """Current confirmed IDs should not force all historical rows positive."""
+        active_df = pd.DataFrame({
+            "cms_code_enc": ["A", "B", "C"],
+            "feat_0": [1.0, 2.0, 3.0],
+            "y_smooth": [0.0, 0.0, 1.0],
+            "y_label": [0.0, 0.0, 1.0],
+            "sample_weight": [1.0, 1.0, 1.0],
+        })
+        history_df = pd.DataFrame({
+            "cms_code_enc": ["C"],
+            "feat_0": [100.0],
+            "y_raw": [0],
+        })
+        result = build_final_dataset(
+            active_df,
+            history_df,
+            {"C"},
+            ["feat_0"],
+            eval_unlabeled_frac=0.0,
+        )
+        assert result.y_train.iloc[-1] == 0.0
+
+
+class TestSplitConfirmedIds:
+    """Tests for leakage-safe confirmed ID splitting."""
+
+    def test_split_is_reproducible_and_disjoint(self):
+        ids = {f"ID_{i}" for i in range(10)}
+        train_ids, eval_ids = split_confirmed_ids(ids, eval_holdout_frac=0.2, random_seed=42)
+        train_ids_2, eval_ids_2 = split_confirmed_ids(ids, eval_holdout_frac=0.2, random_seed=42)
+
+        assert train_ids == train_ids_2
+        assert eval_ids == eval_ids_2
+        assert train_ids.isdisjoint(eval_ids)
+        assert train_ids | eval_ids == ids
+        assert len(eval_ids) == 2

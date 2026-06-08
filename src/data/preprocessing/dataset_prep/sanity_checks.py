@@ -3,8 +3,6 @@
 Run after building the final dataset to validate correctness
 before passing to model training.
 
-Conventions applied:
-  - 13-Data_ML §3.3: Fail early on data quality issues.
 """
 
 from __future__ import annotations
@@ -32,8 +30,13 @@ def run_sanity_checks(result: DatasetResult, eval_ids: set[str]) -> bool:
     checks_passed = True
 
     # 1. No overlap between train and eval
-    train_ids = set(result.active_df.loc[~result.active_df["cms_code_enc"].isin(eval_ids), "cms_code_enc"])
-    overlap = train_ids & eval_ids
+    if "_dataset_split" in result.active_df.columns:
+        train_ids = set(result.active_df.loc[result.active_df["_dataset_split"] == "train", "cms_code_enc"])
+        eval_split_ids = set(result.active_df.loc[result.active_df["_dataset_split"] == "eval", "cms_code_enc"])
+    else:
+        train_ids = set(result.active_df.loc[~result.active_df["cms_code_enc"].isin(eval_ids), "cms_code_enc"])
+        eval_split_ids = set(eval_ids)
+    overlap = train_ids & eval_split_ids
     _check(
         len(overlap) == 0,
         f"[1] Train/Eval overlap: {len(overlap)} (must be 0)",
@@ -74,11 +77,28 @@ def run_sanity_checks(result: DatasetResult, eval_ids: set[str]) -> bool:
         critical=True,
     )
 
-    # 6. Eval set size matches
-    eval_size_ok = len(result.x_eval) == len(eval_ids) or len(eval_ids) == 0
+    # 6. Confirmed holdout IDs are present in eval, not train
+    eval_confirmed = set(eval_ids)
+    eval_confirmed_in_eval = eval_confirmed <= eval_split_ids
+    eval_confirmed_in_train = eval_confirmed & train_ids
+    eval_size_ok = eval_confirmed_in_eval and len(eval_confirmed_in_train) == 0
     _check(
         eval_size_ok,
-        f"[6] Eval set size: {len(result.x_eval)} (expected {len(eval_ids)})",
+        f"[6] Confirmed eval holdout: {len(eval_confirmed)} IDs, train overlap={len(eval_confirmed_in_train)}",
+        critical=bool(eval_confirmed),
+    )
+
+    # 7. Feature list must not include future horizon or target columns
+    forbidden_tokens = ("horizon", "future", "target", "label", "churn", "y_raw", "y_label", "y_smooth")
+    leaked_features = [
+        name
+        for name in result.feature_names
+        if any(token in name.lower() for token in forbidden_tokens)
+    ]
+    _check(
+        not leaked_features,
+        f"[7] Leakage-like feature names: {leaked_features}",
+        critical=True,
     )
 
     if checks_passed:

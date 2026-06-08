@@ -7,11 +7,6 @@ functions to query confirmed IDs by month.
 File naming convention:
     Roi_bo_MM_YY.csv or Roi_bo_MM_YY.xlsx  (e.g. Roi_bo_01_25 = thang 01/2025)
 
-Conventions applied:
-  - 13-Data_ML §5.1: Dedicated adapter per data source.
-  - 13-Data_ML §9.1: Idempotent — re-loading same file is safe (UPSERT).
-  - 02-Config §4.3: No os.getenv here — paths from caller.
-  - 08-Security §7.1: No credentials in logs.
 """
 
 from __future__ import annotations
@@ -39,7 +34,6 @@ CSKH_TABLE = "confirmed_churners"
 def ensure_cskh_schema(engine: Engine) -> None:
     """Create the cskh schema and confirmed_churners table if not exists.
 
-    Convention: 13-Data_ML §9.1 — idempotent DDL.
     """
     ddl = [
         "CREATE SCHEMA IF NOT EXISTS cskh",

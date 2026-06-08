@@ -1,6 +1,5 @@
 """Persist EDA report to PostgreSQL.
 
-Convention: follows upsert pattern from
 ``monitoring.model_quality.monitoring.drift.upsert_feature_drift``.
 """
 

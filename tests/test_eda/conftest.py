@@ -1,6 +1,5 @@
 """Shared fixtures for EDA tests.
 
-Convention: 07-Testing §5.1 — reusable fixtures for test setup.
 """
 
 from __future__ import annotations

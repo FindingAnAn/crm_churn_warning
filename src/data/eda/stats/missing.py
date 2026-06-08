@@ -1,6 +1,5 @@
 """Missing-value analysis for numeric features.
 
-Convention: 10-Code_design §2.1 — one coherent responsibility per function.
 """
 
 from __future__ import annotations
@@ -47,7 +46,10 @@ def compute_missing_stats(
             "has_inf": has_inf,
         })
 
-    return pd.DataFrame(rows)
+    result = pd.DataFrame(rows)
+    if "has_inf" in result.columns:
+        result["has_inf"] = result["has_inf"].astype(object)
+    return result
 
 
 def compute_missing_pattern(

@@ -1,7 +1,7 @@
 """Unit tests for feature generation template engine."""
 
 import pytest
-from features.engineering.feature_gen.template_engine import (
+from src.features.engineering.aggregation.template_engine import (
     clear_cache,
     get_template,
     render_template,
@@ -29,7 +29,7 @@ def test_render_template_replaces_placeholders():
     # Usually lifetime_table has placeholders, we'll test the engine string replacement.
     
     # Let's mock the cache to inject a fake template for controlled testing
-    from features.engineering.feature_gen.template_engine import _TEMPLATE_CACHE
+    from src.features.engineering.aggregation.template_engine import _TEMPLATE_CACHE
     _TEMPLATE_CACHE["dummy_test"] = "SELECT * FROM {schema}.{table_name} WHERE id = '{id}'"
     
     rendered = render_template(

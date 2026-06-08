@@ -1,0 +1,28 @@
+# Airflow custom image for orchestrating Kubernetes Pods
+FROM apache/airflow:3.1.7-python3.11 AS runtime
+
+USER root
+
+# Install required system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libpq5 \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch back to the airflow default user
+USER airflow
+
+# Copy source code to run local DAGs directly if using LocalExecutor or CeleryExecutor
+# (Not critical for K8sPodOperator, but useful for DAG parsing)
+COPY --chown=airflow:0 src/ /opt/airflow/src/
+ENV PYTHONPATH="/opt/airflow/src"
+
+# Install Kubernetes provider for KubernetesPodOperator
+RUN pip install --no-cache-dir \
+    apache-airflow==3.1.7 \
+    apache-airflow-providers-cncf-kubernetes
+
+# Production grade Healthcheck (Rule 4.1)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1

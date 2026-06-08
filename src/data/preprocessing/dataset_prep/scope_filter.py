@@ -3,11 +3,6 @@
 Load the working set of customers from ``cus_lifetime`` and optionally
 load the CSKH confirmed churn list for the evaluation set.
 
-Conventions applied:
-  - 13-Data_ML §5.1: Each data source has its own adapter function.
-  - 13-Data_ML §6.2: Functions are stateless — accept params, return result.
-  - 13-Data_ML §9.1: Idempotent — same input → same output.
-  - 13-Data_ML §9.3: Does not modify input data in-place.
 """
 
 from __future__ import annotations
@@ -88,6 +83,90 @@ def load_working_set(
 
     logger.info(
         "Scope filter: loaded %d customers (min_orders=%d)",
+        len(df),
+        min_lifetime_orders,
+    )
+    return df
+
+
+def load_working_set_as_of(
+    engine: Engine,
+    min_lifetime_orders: int,
+    data_start: pd.Timestamp,
+    as_of_month: pd.Timestamp,
+) -> pd.DataFrame:
+    """Load customers qualifying for churn analysis as of one observation month.
+
+    This function avoids look-ahead leakage from ``data_static.cus_lifetime`` by
+    computing scope from source activity only up to ``as_of_month``.
+    """
+    sql = text("""
+        WITH activity AS (
+            SELECT
+                cms_code_enc,
+                SUM(item_count)::bigint AS lifetime_total_items,
+                SUM(total_fee)::bigint AS lifetime_total_revenue,
+                SUM(weight_kg)::double precision AS lifetime_total_weight,
+                SUM(total_complaint)::bigint AS lifetime_total_complaint,
+                MIN(report_month) AS first_month,
+                COUNT(DISTINCT report_month)::int AS lifetime_months_active
+            FROM public.cas_customer
+            WHERE report_month >= :data_start
+              AND report_month <= :as_of_month
+            GROUP BY cms_code_enc
+            HAVING SUM(item_count) >= :min_orders
+        ),
+        info AS (
+            SELECT DISTINCT ON (cms_code_enc)
+                cms_code_enc,
+                COALESCE(contract_classify, 1) AS contract_classify,
+                COALESCE(contract_service, 62) AS contract_service,
+                COALESCE(custype, 1) AS custype,
+                contract_sig_first,
+                tenure,
+                contract_mgr_org,
+                cus_poscode,
+                cus_province
+            FROM public.cas_info
+            ORDER BY cms_code_enc, contract_sig_first DESC NULLS LAST
+        )
+        SELECT
+            a.cms_code_enc,
+            (LEFT(a.cms_code_enc, 1) = 'T') AS is_corporate,
+            i.contract_classify,
+            i.contract_service,
+            i.custype,
+            COALESCE(i.contract_sig_first, date_trunc('month', a.first_month))::timestamp AS contract_sig_first,
+            COALESCE(
+                i.tenure,
+                (
+                    EXTRACT(year FROM age(:as_of_month::timestamp, COALESCE(i.contract_sig_first, a.first_month))) * 12
+                    + EXTRACT(month FROM age(:as_of_month::timestamp, COALESCE(i.contract_sig_first, a.first_month)))
+                )::int
+            ) AS tenure,
+            i.contract_mgr_org,
+            i.cus_poscode,
+            i.cus_province,
+            a.lifetime_total_items,
+            a.lifetime_total_revenue,
+            a.lifetime_total_weight,
+            a.lifetime_total_complaint,
+            a.lifetime_months_active
+        FROM activity a
+        LEFT JOIN info i ON i.cms_code_enc = a.cms_code_enc
+    """)
+
+    params = {
+        "data_start": data_start.strftime("%Y-%m-01"),
+        "as_of_month": as_of_month.strftime("%Y-%m-01"),
+        "min_orders": min_lifetime_orders,
+    }
+    with engine.connect() as conn:
+        df = pd.read_sql(sql, conn, params=params)
+
+    logger.info(
+        "Scope filter as-of %s: loaded %d customers (min_orders=%d)",
+        as_of_month.strftime("%Y-%m"),
         len(df),
         min_lifetime_orders,
     )

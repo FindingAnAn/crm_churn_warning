@@ -11,7 +11,6 @@ Public API
 - ``EdaReport``          — result container
 - ``ensure_eda_schema``  — DDL helper
 
-Convention: 05-Module §3.1 — expose only the public surface.
 """
 
 from data.eda.config import EdaConfig

@@ -4,10 +4,6 @@ Mỗi lần build prototype thành công (có CSKH), lưu vào bảng
 ``cskh.prototype_cache``. Tháng sau, nếu không có CSKH,
 load bản prototype gần nhất.
 
-Conventions applied:
-  - 13-Data_ML §9.1: Idempotent DDL (IF NOT EXISTS).
-  - 13-Data_ML §7.4: Model artifacts with consistent naming.
-  - 08-Security §7.1: No credentials in logs.
 """
 
 from __future__ import annotations
@@ -31,7 +27,6 @@ CACHE_TABLE = "prototype_cache"
 def ensure_prototype_cache_table(engine: Engine) -> None:
     """Create the prototype_cache table if not exists.
 
-    Convention: 13-Data_ML §9.1 — idempotent DDL.
     """
     ddl = [
         "CREATE SCHEMA IF NOT EXISTS cskh",
