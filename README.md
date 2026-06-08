@@ -691,7 +691,7 @@ kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
 # Login: admin / admin
 ```
 
-> **Lưu ý Path trên Windows:** Nếu test bằng Docker Desktop, đường dẫn mount trong YAML phải dùng format: `/run/desktop/mnt/host/d/...` thay vì `D:\...`
+> **Lưu ý Path trên Windows:** Không sửa trực tiếp DAG để đổi mount path. Cấu hình `CHURN_DATA_HOST_PATH` qua Airflow Variable hoặc biến môi trường; nếu test bằng Docker Desktop, giá trị thường có dạng `/run/desktop/mnt/host/d/...` thay vì `D:\...`.
 
 ### 6.5 Chạy Pipeline thủ công (không qua Airflow)
 

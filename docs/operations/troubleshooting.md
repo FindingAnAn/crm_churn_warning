@@ -25,7 +25,7 @@
 ## 3. Kubernetes Deployment & Airflow Helm
 ### Lỗi: `invalid mode: /churn_data` khi mount volume trên Docker Desktop Windows
 - **Dấu hiệu:** Kubernetes Pod Operator báo lỗi tạo Container. Nguyên nhân do mount data bằng `host_path` có chứa `D:\...`. Docker cắt lấy chuỗi `:` làm parameter mode nên báo lỗi.
-- **Cách xử lý:** Không dùng format ổ Windows. Đổi `host_path` sang chuẩn mount ngầm của Docker Desktop Virtual Machine: `/run/desktop/mnt/host/d/Churn_Prediction_Product/...`
+- **Cách xử lý:** Không dùng format ổ Windows. Cấu hình `CHURN_DATA_HOST_PATH` qua Airflow Variable hoặc biến môi trường, ví dụ dạng Linux-node của Docker Desktop: `/run/desktop/mnt/host/d/...`
 
 ### Lỗi: Airflow Webserver không đọc được log (NameResolutionError / Failed to resolve)
 - **Dấu hiệu:** UI báo `Max retries exceeded with url... Failed to resolve '[worker-pod-name]'`. Hiện tượng này diễn ra khi Airflow dùng `KubernetesExecutor`.
