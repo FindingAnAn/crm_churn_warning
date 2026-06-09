@@ -90,7 +90,7 @@ def insert_predictions(
                     "cms_code_enc": str(row.get("cms_code_enc", "")),
                     "churn_probability": float(row["churn_probability"]),
                     "churn_flag": 1,
-                    "threshold_used": float(threshold),
+                    "threshold_used": float(row.get("threshold_used", threshold)),
                     "reason_1": row.get("reason_1"),
                     "reason_2": row.get("reason_2"),
                     "reason_3": row.get("reason_3"),

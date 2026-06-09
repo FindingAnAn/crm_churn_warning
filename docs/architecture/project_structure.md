@@ -46,7 +46,7 @@ outputs and are excluded from Git.
 
 ## Scheduling
 
-`ds_churn_pipeline` runs weekly at 05:00 by default:
+`run_churn_pipeline` runs weekly at 05:00 by default:
 
 ```text
 CHURN_MODEL_SCHEDULE="0 5 * * 6"

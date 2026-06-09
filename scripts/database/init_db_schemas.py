@@ -18,10 +18,6 @@ import sys
 from dotenv import load_dotenv
 from sqlalchemy import text
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +26,9 @@ def init_schemas() -> None:
     load_dotenv()
 
     from core.database import get_engine
+    from modeling.config.best_config import ensure_best_config_table
+    from modeling.serving.risk_table import ensure_risk_table
+    from monitoring.model_quality.ddl import ensure_monitoring_schema
     from settings.database import PostgresConfig
 
     cfg = PostgresConfig.from_env()
@@ -83,6 +82,10 @@ def init_schemas() -> None:
                 logger.error("FAILED: %s... → %s", stmt[:60], exc)
                 raise
 
+    ensure_best_config_table(engine)
+    ensure_risk_table(engine)
+    ensure_monitoring_schema(engine)
+
     logger.info("═" * 50)
     logger.info("All schemas initialized successfully.")
 
@@ -91,7 +94,7 @@ def init_schemas() -> None:
         result = conn.execute(
             text(
                 "SELECT schema_name FROM information_schema.schemata "
-                "WHERE schema_name IN ('cskh', 'data_static', 'data_window', 'ingest') "
+                "WHERE schema_name IN ('cskh', 'data_static', 'data_window', 'ingest', 'ml_monitor') "
                 "ORDER BY schema_name"
             )
         )
@@ -101,6 +104,9 @@ def init_schemas() -> None:
 
 if __name__ == "__main__":
     try:
+        from core.logging import configure_logging_from_env
+
+        configure_logging_from_env(app_name="database_schema_init")
         init_schemas()
     except Exception as exc:
         logger.error("Schema initialization failed: %s", exc)

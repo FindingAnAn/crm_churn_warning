@@ -1,7 +1,4 @@
-"""Logging configuration.
-
-Defines structured logging setup with level, format, and output paths.
-"""
+"""Environment-backed logging settings."""
 
 from __future__ import annotations
 

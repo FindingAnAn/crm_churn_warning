@@ -27,9 +27,13 @@ def score_all(
         model: Trained XGBoost Booster.
         ds: DatasetResult with x_predict (already scaled).
         threshold: Probability threshold for churn classification.
+        top_percentile: Optional maximum list-size target. If provided, the
+            final threshold is the stricter of ``threshold`` and the dynamic
+            percentile cutoff.
 
     Returns:
-        DataFrame with original metadata + churn_probability + churn_flag.
+        DataFrame with original metadata, churn probability, flag, and the
+        effective threshold used for classification.
     """
     dpredict = xgb.DMatrix(ds.x_predict, feature_names=ds.feature_names)
     y_prob = model.predict(dpredict)
@@ -47,6 +51,8 @@ def score_all(
     scored = ds.active_df.copy()
     scored["churn_probability"] = y_prob
     scored["churn_flag"] = (y_prob >= effective_threshold).astype(int)
+    scored["threshold_used"] = effective_threshold
+    scored.attrs["effective_threshold"] = effective_threshold
 
     logger.info(
         "Scored %d customers: effective_threshold=%.4f, flagged=%d (%.1f%%)",

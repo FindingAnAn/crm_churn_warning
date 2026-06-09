@@ -40,13 +40,8 @@ DEFAULTS = {
     # ════════════════════════════════════════════════════════
     "logging": {
         "level": "INFO",
-        "format": "text",  # or "json"
+        "format": "text",
         "logs_dir": "./logs",
-        # Log output format (Python logging style)
-        "format_string": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        # Output destinations
-        "file": True,
-        "console": True,
     },
     
     # ════════════════════════════════════════════════════════
@@ -55,6 +50,15 @@ DEFAULTS = {
     "model": {
         "model_dir": "./model_bundles",
         "model_schedule": "0 5 * * 6",  # Cron: Every Saturday 05:00 UTC
+        "prediction_horizon_months": 2,
+        "risk_threshold_pct": 90,
+    },
+
+    "monitoring": {
+        "enabled": True,
+        "schema": "ml_monitor",
+        "feature_bins": 10,
+        "max_features": 200,
     },
     
     # ════════════════════════════════════════════════════════
@@ -95,6 +99,8 @@ DEFAULTS = {
         "churn_data_host_path": "/churn_data",  # Host machine path
         "churn_data_mount_path": "/churn_data",  # Container mount path
         "churn_db_secret_name": "churn-db-secret",  # K8s secret name
+        "churn_app_image": "churn_app:latest",
+        "churn_airflow_image": "churn_app_airflow:latest",
     },
     
     # ════════════════════════════════════════════════════════
@@ -143,9 +149,6 @@ DEVELOPMENT = {
     "logging": {
         **DEFAULTS["logging"],
         "level": "DEBUG",  # Verbose logging in development
-        "format_string": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        "file": True,
-        "console": True,
     },
     "features": {
         **DEFAULTS["features"],
@@ -160,9 +163,6 @@ PRODUCTION = {
         **DEFAULTS["logging"],
         "level": "INFO",
         "format": "json",  # Use JSON format in production
-        "format_string": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        "file": True,
-        "console": True,
     },
     "features": {
         **DEFAULTS["features"],

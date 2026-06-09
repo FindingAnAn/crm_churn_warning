@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
+import logging
+
 from core.logging import configure_logging
 from core.logging import get_logger as _get_logger
 from features.engineering.paths import get_engineering_logs_dir
 
-LOG_DIR = get_engineering_logs_dir()
 
-
-def setup_logging():
+def setup_logging() -> logging.Logger:
     """Configure logging once for the feature generation pipeline."""
-    configure_logging(logs_dir=LOG_DIR, app_name="feature_pipeline")
+    configure_logging(logs_dir=get_engineering_logs_dir(), app_name="feature_pipeline")
     return _get_logger("feature_pipeline")
 
 
-def get_logger(name: str):
+def get_logger(name: str) -> logging.Logger:
     """Get a namespaced logger instance for this package."""
     return _get_logger(f"feature_pipeline.{name}")

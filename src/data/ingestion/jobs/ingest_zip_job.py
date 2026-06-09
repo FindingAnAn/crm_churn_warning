@@ -1,10 +1,11 @@
 """Ingest one ZIP archive into production tables."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import os
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from core.logging import get_logger
 from data.ingestion.adapters import FSConfig, PostgresConfig, get_pg_conn
@@ -12,7 +13,6 @@ from data.ingestion.operations.copy_and_insert_to_production import copy_and_ins
 from data.ingestion.operations.post_ingest_maintenance import post_ingest_maintenance
 from data.ingestion.operations.unzip_and_discover import unzip_and_discover
 
-# Setup logging
 logger = get_logger(__name__)
 
 
@@ -56,14 +56,8 @@ def ingest_zip_job(
             "error": string (nếu fail),
         }
     """
-    # Auto-detect test schema from environment
-    # TODO NAMNT check lai
     if use_test_schema is None:
         use_test_schema = os.getenv("USE_TEST_SCHEMA", "").lower() in ("1", "true", "yes")
-
-    # Set environment variable để copy_and_insert_to_production biết dùng test schema
-    if use_test_schema:
-        os.environ["USE_TEST_SCHEMA"] = "1"
 
     zip_name = zip_path.name
     result = {
@@ -126,15 +120,16 @@ def ingest_zip_job(
 
     # 3) load data into production (transform + insert directly)
     try:
-        prod_rows = copy_and_insert_to_production(
-            meta,
-            pg_cfg,
-            batch_rows=batch_rows,
-            source_has_header=source_has_header,
-            injection_mode=injection_mode,
-            use_encryption=use_encryption,
-            encryption_mapping_file=encryption_mapping_file,
-        )
+        with _temporary_use_test_schema(bool(use_test_schema)):
+            prod_rows = copy_and_insert_to_production(
+                meta,
+                pg_cfg,
+                batch_rows=batch_rows,
+                source_has_header=source_has_header,
+                injection_mode=injection_mode,
+                use_encryption=use_encryption,
+                encryption_mapping_file=encryption_mapping_file,
+            )
         result["prod_rows"] = prod_rows
         result["staging_rows"] = prod_rows  # legacy key, same as prod_rows
     except Exception as e:
@@ -189,3 +184,20 @@ def ingest_zip_job(
 
     logger.info(f"[SUCCESS] {zip_name}: {prod_rows:,} rows inserted directly to production")
     return result
+
+
+@contextmanager
+def _temporary_use_test_schema(enabled: bool) -> Iterator[None]:
+    """Scope USE_TEST_SCHEMA to one ingest operation."""
+    previous_value = os.environ.get("USE_TEST_SCHEMA")
+    try:
+        if enabled:
+            os.environ["USE_TEST_SCHEMA"] = "1"
+        else:
+            os.environ.pop("USE_TEST_SCHEMA", None)
+        yield
+    finally:
+        if previous_value is None:
+            os.environ.pop("USE_TEST_SCHEMA", None)
+        else:
+            os.environ["USE_TEST_SCHEMA"] = previous_value

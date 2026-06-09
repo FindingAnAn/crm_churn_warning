@@ -53,7 +53,7 @@ class ModelConfig:
     f2_improve_eps: float = 1e-6
 
     # ── Scoring ───────────────────────────────────────────
-    risk_threshold_pct: float = 70.0
+    risk_threshold_pct: float = 90.0
 
     # ── Misc ──────────────────────────────────────────────
     random_state: int = 42
@@ -74,6 +74,21 @@ class ModelConfig:
             raise ValueError(f"colsample_bytree must be in (0, 1], got {self.colsample_bytree}")
         if not (0 <= self.risk_threshold_pct <= 100):
             raise ValueError(f"risk_threshold_pct must be in [0, 100], got {self.risk_threshold_pct}")
+
+    @property
+    def min_f1(self) -> float:
+        """Backward-compatible alias for the current F0.5 guardrail."""
+        return self.min_f2
+
+    @property
+    def min_pr_auc(self) -> float:
+        """Backward-compatible alias for the current PR-AUC guardrail."""
+        return self.min_roc_auc
+
+    @property
+    def f1_improve_eps(self) -> float:
+        """Backward-compatible alias for the current F0.5 improvement epsilon."""
+        return self.f2_improve_eps
 
     def to_xgb_params(self) -> dict:
         """Convert to XGBoost parameter dict."""
@@ -102,5 +117,8 @@ class ModelConfig:
             "subsample": self.subsample,
             "colsample_bytree": self.colsample_bytree,
             "early_stopping_rounds": self.early_stopping_rounds,
+            "min_f05": self.min_f1,
+            "min_pr_auc": self.min_pr_auc,
+            "f05_improve_eps": self.f1_improve_eps,
             "risk_threshold_pct": self.risk_threshold_pct,
         }

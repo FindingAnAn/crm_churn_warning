@@ -228,17 +228,27 @@ def get_file_system_config() -> Dict[str, Any]:
     return fs_config
 
 
-def get_logging_config() -> Dict[str, Any]:
-    """Get logging configuration.
+def get_monitoring_config() -> Dict[str, Any]:
+    """Get model-quality monitoring configuration.
 
     Returns:
-        Dictionary with logging settings.
+        Dictionary with PostgreSQL monitoring settings.
     """
-    log_config = config["logging"].copy()
+    mon_config = config["monitoring"].copy()
 
-    # Override with environment variables if present
-    log_config["level"] = os.getenv("LOG_LEVEL", log_config.get("level", "INFO"))
-    log_config["format"] = os.getenv("LOG_FORMAT", log_config.get("format", "text"))
-    log_config["logs_dir"] = os.getenv("LOGS_DIR", log_config.get("logs_dir"))
+    enabled = os.getenv("ENABLE_MODEL_QUALITY_MONITORING")
+    if enabled is not None:
+        mon_config["enabled"] = enabled.lower() in {"1", "true", "yes", "on"}
 
-    return log_config
+    mon_config["schema"] = os.getenv(
+        "ML_MONITOR_SCHEMA",
+        mon_config.get("schema", "ml_monitor"),
+    )
+    mon_config["feature_bins"] = int(
+        os.getenv("ML_MONITOR_FEATURE_BINS", mon_config.get("feature_bins", 10))
+    )
+    mon_config["max_features"] = int(
+        os.getenv("ML_MONITOR_MAX_FEATURES", mon_config.get("max_features", 200))
+    )
+
+    return mon_config

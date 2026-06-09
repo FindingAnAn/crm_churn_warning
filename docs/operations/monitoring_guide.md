@@ -38,7 +38,7 @@ Khi truy cập vào Grafana, hệ thống sẽ tự động sinh ra một Catalo
 
 ### Khối Giám Sát Cấu Trúc Vật Lý / Ảo (Node Exporter)
 Dành cho Sysadmin quản lý tài nguyên máy ảo:
-- **Node Exporter / Nodes (⭐ QUAN TRỌNG):** Dashboard "nhìn phát biết luôn" sinh tử của Máy ảo. Phản ánh RAM rảnh rỗi, Load Average CPU, và % Disk (Hết ổ cứng là lỗi vỡ tổ phổ biến nhất của Data Pipeline).
+- **Node Exporter / Nodes (QUAN TRỌNG):** Dashboard "nhìn phát biết luôn" sinh tử của Máy ảo. Phản ánh RAM rảnh rỗi, Load Average CPU, và % Disk (Hết ổ cứng là lỗi vỡ tổ phổ biến nhất của Data Pipeline).
 - **Node Exporter / USE Method / Node:** Phân tích độ nghẽn thắt cổ chai (Utilization - Saturation - Errors).
 - **Node Exporter / USE Method / Cluster:** Giống như Node nhưng tổng hợp cho tất cả các máy chủ trong cụm K8s.
 - `Node Exporter / AIX` và `MacOS`: Bỏ qua nếu chạy Linux.
@@ -54,7 +54,7 @@ Dành cho DevOps tìm lỗi K8s API hay Scheduler:
 
 ### Khối Giám Sát Ứng dụng & Luồng Data (Tầng Compute Resources)
 Dành cho bạn - Nhóm Kỹ sư Dữ liệu tối ưu Airflow và XGBoost:
-- **Kubernetes / Compute Resources / Namespace (Pods) (⭐ KİM CHỈ NAM):** Nắm bắt toàn cảnh sự bào mòn tài nguyên của "đại bản doanh" Airflow. Lọc góc trái từ `namespace=All` thành `namespace=default` để check độ "ngốn" cấu hình của dự án mình.
+- **Kubernetes / Compute Resources / Namespace (Pods) (KİM CHỈ NAM):** Nắm bắt toàn cảnh sự bào mòn tài nguyên của "đại bản doanh" Airflow. Lọc góc trái từ `namespace=All` thành `namespace=default` để check độ "ngốn" cấu hình của dự án mình.
 - **Kubernetes / Compute Resources / Pod:** Theo dõi RAM/CPU của task XGBoost chạy qua `pipelines.churn.cli`.
 - **Hàng loạt các bảng Network / Computing khác (Workload, Cluster, Persistent Volumes):** Rất đa mục đích để kiểm tra dung lượng ổ đĩa của Log hay băng thông tải file CSV.
 
@@ -66,7 +66,7 @@ Dành cho bạn - Nhóm Kỹ sư Dữ liệu tối ưu Airflow và XGBoost:
 
 | Tín Hiệu (Màn hình Dashboard) | Phán Đoán (Bệnh Lí) | Hành Động Can Thiệp Nhanh (Intervention) |
 | :--- | :--- | :--- |
-| **Node Exporter / Nodes:** Ổ cứng khả dụng xuống dưới `15%`. | Log Error của Airflow hoặc Model Cache Pickles (`/data/saved/`) tích tụ không được dọn dẹp. | Trigger ngay cái DAG `ds_churn_housekeeping` để xóa cache cũ. Kéo dung lượng PVC (Persistent Virtual Claim) của Logs. |
+| **Node Exporter / Nodes:** Ổ cứng khả dụng xuống dưới `15%`. | Log Error của Airflow hoặc Model Cache Pickles (`/data/saved/`) tích tụ không được dọn dẹp. | Trigger ngay cái DAG `clean_runtime_files` để xóa cache cũ. Kéo dung lượng PVC (Persistent Virtual Claim) của Logs. |
 | **Compute Resources / Pod:** Nửa đêm, Memory của Pod KPO XGBoost nhảy lên quá mốc Request Memory cài sẵn chạm mức Limit vạch màu cam. | Thuật toán quá phức tạp hoặc dữ liệu `cas_customer` tháng đó phình to gấp đôi. | Can thiệp bằng cách tăng `resources.requests.memory` cho Worker Pods ở biểu mẫu Helm Airflow. |
 | **Airflow Web UI:** Báo Pod bị kẹt ở trạng thái `Pending` kéo dài 30 phút. | K8s Cluster đã bị hút cạn Memory, không còn Node trống để nhét Pod Airflow vào. | Tạm dừng các luồng Ingest phụ trợ. Checkout Grafana để xem Pod nào đang "ăn" nhiều nhất. Nếu cần phải scale scale-up (Tăng cường RAM vật lý cho VM). |
 
@@ -96,3 +96,43 @@ rate(kube_pod_container_status_restarts_total{namespace="default", container="ai
 ```
 - **Tại sao dùng:** Scheduler là "trái tim" của Airflow. Nếu nó bị khởi động lại liên tục (CrashLoopBackOff) ở 10 phút gần đây, nghĩa là Scheduler đang bị quá tải DAGs hoặc kẹt cấu hình Database (giống đợt chập lỗi DB `.env`).
 - **Khi nào dùng:** Khung cảnh khẩn cấp (Emergency Drop). Thấy tín hiệu này là toàn bộ Team Data phải vào cuộc xem log.
+---
+
+## 6. Model-Quality Monitoring in PostgreSQL
+
+Prometheus/Grafana monitors infrastructure health. Model-output quality is stored in PostgreSQL under `ml_monitor` so
+that it remains queryable even when no UI dashboard is available.
+
+| Table | Purpose |
+|---|---|
+| `ml_monitor.run_log` | Monthly run status, accepted flag, retrain/score flags, and operator notes. |
+| `ml_monitor.score_drift` | Active count, risk count, score quantiles, risk ratio, and anomaly reason. |
+| `ml_monitor.feature_drift` | Feature-level PSI and discrete KS against the accepted training profile. |
+| `ml_monitor.backtest` | Precision-in-list, recall-in-list, and F1-in-list after future labels arrive. |
+
+Operational SQL checks:
+
+```sql
+select run_id, started_at, finished_at, status, accepted, did_retrain, did_score, notes
+from ml_monitor.run_log
+order by started_at desc
+limit 20;
+
+select window_end, horizon, active_cnt, risk_cnt, risk_ratio, p50, p90, p99, is_anomaly, anomaly_reason
+from ml_monitor.score_drift
+order by created_at desc
+limit 20;
+
+select window_end, horizon, feature_name, psi, ks_stat, severity
+from ml_monitor.feature_drift
+where is_anomaly
+order by created_at desc;
+
+select pred_window_end, label_window_end, list_size, churn_true_in_list, precision_in_list
+from ml_monitor.backtest
+order by created_at desc
+limit 20;
+```
+
+The local Prometheus proof can be summarized with scrape-target health and the PromQL checks above. For portfolio use,
+prefer a recreated panel from these queries over a raw authenticated Grafana screenshot.

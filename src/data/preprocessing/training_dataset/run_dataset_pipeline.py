@@ -316,6 +316,18 @@ def run_dataset_pipeline(
         NUMERIC_FEATURES,
         random_seed=config.random_seed,
     )
+    result.metadata.update(
+        {
+            "t_obs": t_obs.isoformat(),
+            "window_end": _compute_run_month(t_obs_end),
+            "run_month": _compute_run_month(t_obs),
+            "w_star": int(w_star),
+            "fallback_mode": bool(fallback_mode),
+            "has_cskh": bool(has_cskh),
+            "n_confirmed": int(len(confirmed_ids)),
+            "n_eval_ids": int(len(eval_ids)),
+        }
+    )
 
     # ── Sanity checks ─────────────────────────────────────
     logger.info("═" * 60)

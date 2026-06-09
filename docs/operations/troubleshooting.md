@@ -1,63 +1,123 @@
-# Cẩm nang Xử lý Sự cố (Troubleshooting Guide)
+# Troubleshooting Guide
 
-> [!NOTE]
-> Tài liệu này liệt kê các lỗi thường gặp trong quá trình vận hành pipeline Churn Prediction và cách khắc phục nhanh.
+This runbook covers the common failure modes for the batch churn-warning
+pipeline: ingestion, feature generation, monthly modeling, Kubernetes pods, and
+monitoring.
 
-## 1. ETL/Ingestion Pipeline
-### Lỗi: Không thể kéo dữ liệu (Connection Refused)
-- **Dấu hiệu:** `# TODO(author): Ví dụ DAG IngestionTask bị đỏ (fail).`
-- **Nguyên nhân có thể:** `# TODO(author): Ví dụ sai Credentials DB CSKH, hoặc bị chặn Firewall.`
-- **Cách xử lý:** `# TODO(author): Check Secrets trên K8s, VPN...`
+## Ingestion
 
-### Lỗi: Thiếu dữ liệu (Missing Data)
-- **Dấu hiệu:** `SchemaMismatch` hoặc `DataQualityError`.
-- **Cách xử lý:** `# TODO(author): Báo cho team DBA hoặc bypass check nếu được duyệt.`
+### Cannot Connect To PostgreSQL
 
-## 2. API / Inference
-### Lỗi: Pod CrashLoopBackOff (Hết RAM / OOMKilled)
-- **Dấu hiệu:** `/health` endpoint báo timeout 502/504 Bad Gateway. Grafana báo Memory Limit Exceeded.
-- **Cách xử lý:** `# TODO(author): Nâng Limit/Request trên Helm, Restart Pod.`
+- **Signal:** `ingest_data` fails before loading files; logs mention missing
+  `PG_*` variables, refused connection, timeout, or authentication failure.
+- **Likely cause:** `.env` is missing locally, Kubernetes secret
+  `churn-db-secret` is not injected, or `DATABASE_URL`/`PG_HOST` points to the
+  wrong database.
+- **Fix:** Check `.env.example`, recreate the Kubernetes secret from `.env`, and
+  run `python scripts/database/check_db_status.py` before retrying the DAG.
 
-### Lỗi: Dự đoán không nhất quán (Model Drift Warning)
-- **Dấu hiệu:** Tỉ lệ Churn dự đoán đột ngột chênh lệc 5x so với quá khứ.
-- **Cách xử lý:** `# TODO(author): Thu thập data gần nhất, chạy Retraining Pipeline thủ công, verify trước khi đẩy model lên Production.`
+### File Fails Validation
 
-## 3. Kubernetes Deployment & Airflow Helm
-### Lỗi: `invalid mode: /churn_data` khi mount volume trên Docker Desktop Windows
-- **Dấu hiệu:** Kubernetes Pod Operator báo lỗi tạo Container. Nguyên nhân do mount data bằng `host_path` có chứa `D:\...`. Docker cắt lấy chuỗi `:` làm parameter mode nên báo lỗi.
-- **Cách xử lý:** Không dùng format ổ Windows. Cấu hình `CHURN_DATA_HOST_PATH` qua Airflow Variable hoặc biến môi trường, ví dụ dạng Linux-node của Docker Desktop: `/run/desktop/mnt/host/d/...`
+- **Signal:** Ingest logs show schema mismatch, bad header, parse failure, or no
+  CSV found after unzip.
+- **Likely cause:** Source file format changed, ZIP naming convention changed,
+  or the file is incomplete.
+- **Fix:** Inspect the copy in the failed-data directory, correct the file at
+  source, move the corrected ZIP back to the incoming directory, and trigger
+  `ingest_data` again. Do not bypass validation without checking feature SQL
+  impact.
 
-### Lỗi: Airflow Webserver không đọc được log (NameResolutionError / Failed to resolve)
-- **Dấu hiệu:** UI báo `Max retries exceeded with url... Failed to resolve '[worker-pod-name]'`. Hiện tượng này diễn ra khi Airflow dùng `KubernetesExecutor`.
-- **Nguyên nhân:** Khi 1 task kết thúc, Worker Pod đó bị K8s xóa. Trong khi chạy local, hệ thống lại chưa có kho chứa Log riêng nên Webserver mò tìm vào đúng cái IP của Pod đã biến mất.
-- **Cách xử lý:** Phải sửa cấu hình Helm (`values-local.yaml`) bật Persistent Volume cho Log (`logs.persistence.enabled: true`).
+### Duplicate Or Replayed ZIP
 
-### Lỗi: KPO báo `Missing required environment variables: PG_USER and PG_PASSWORD`
-- **Dấu hiệu:** Task Ingest / Pipeline thất bại ngay từ giây đầu tiên vì không gọi được Database.
-- **Nguyên nhân:** DAG gọi KPO pod ra là một container mới hoàn toàn (trống rỗng), không có `.env` file bên cạnh như chạy local script.
-- **Cách xử lý:** Khởi tạo DB Crentials thành 1 cái Secrets trong cụm K8s (`kubectl create secret generic churn-db-secret --from-env-file=".env"`). Xong xuôi, tại KubernetesPodOperator, inject secret đố vào Pod = `env_from=[k8s.V1EnvFromSource(secret_ref=...)]`. 
+- **Signal:** A rerun sees a ZIP that was already processed successfully.
+- **Fix:** Use `skip_if_logged=True` for reruns that should ignore prior success,
+  or clear the relevant `ingest.ingest_log` row only when a controlled reload is
+  intended.
 
-### Lỗi: UPGRADE FAILED: `cannot patch ... with kind StatefulSet ... fields other than ... are forbidden`
-- **Dấu hiệu:** Terminal báo lỗi đỏ chót từ chối khi gõ `helm upgrade`, đặc biệt nếu vừa mới bật ổ cứng Volumes Persistence cho StatefulSets (vd: `airflow-triggerer`).
-- **Nguyên nhân:** Thiết kế chuẩn của K8s không cho phép tự ý cấp phát Volumes đè vào các StatefulSets đang chạy sống.
-- **Cách xử lý:** Reset cái StatefulSets đang kẹt (ví dụ: `kubectl delete statefulset airflow-triggerer -n default`) và chạy lại `helm upgrade` là xong. Bộ sinh Pod sẽ rà soát và cấu hình Volume mới mượt mà.
+## Feature And EDA Jobs
 
-## 4. Monitoring & Grafana (Môi trường Local Docker Desktop)
-### Lỗi: Dashboard Grafana có báo Request/Limit nhưng báo "No data" ở biểu đồ tài nguyên thực tế (CPU/Memory Utilisation)
-- **Dấu hiệu:** Trên Grafana, bảng `Kubernetes / Compute Resources / Namespace (Pods)` hiển thị trống trơn các biểu đồ dạng đường, trong khi cột Limit và Quota vẫn có số.
-- **Nguyên nhân:** 
-  1. Kubelet mặc định chặn Prometheus scrape dữ liệu do lỗi chứng chỉ tự ký (self-signed).
-  2. Dù Prometheus vượt qua bảo mật (bằng cách chỉnh `insecureSkipVerify: true` trong Helm values), **Docker Desktop có giới hạn cố hữu**: Kubelet (chạy cAdvisor) của nó chỉ xuất metrics cấp độ "Pod", chứ KHÔNG có metric cấp độ "Container". Nhãn (label) `container` bị bỏ trống.
-  3. Dashboard mặc định của cộng đồng lại dùng câu lệnh PromQL bắt buộc nhóm theo nhãn `container` (ví dụ: `sum by (pod, container)`). Vì tìm không ra nhãn này, nó báo lỗi "No data".
-- **Cách xử lý:**
-  Đây là giới hạn thuần túy của giả lập Local, lên Production thật sẽ không bị. Để phục vụ việc theo dõi ở Local, hãy ấn vào menu **Explore** (la bàn) trên Grafana và gõ các câu lệnh tuỳ chỉnh không cần nhãn `container`.
-  
-  *Ví dụ các câu lệnh PromQL dùng cho Docker Desktop:*
-  - Theo dõi RAM tổng của toán bộ Pipeline Churn:
-    ```promql
-    sum(container_memory_usage_bytes{pod=~"churn-pipeline-.*"}) by (pod)
-    ```
-  - Theo dõi CPU của toàn bộ namespace mặc định:
-    ```promql
-    sum(irate(container_cpu_usage_seconds_total{namespace="default"}[5m])) by (pod)
-    ```
+### Feature Table Missing
+
+- **Signal:** Dataset prep cannot load `data_static.cus_lifetime` or
+  `data_window.cus_feature_*`.
+- **Fix:** Run `build_features` first, then confirm the target tables exist in
+  PostgreSQL. If running locally, verify `CHURN_DATA_HOST_PATH`,
+  `CHURN_DATA_MOUNT_PATH`, and database credentials in Airflow variables/env.
+
+### EDA Report Has No Temporal Data
+
+- **Signal:** `generate_eda_reports` logs that no window tables were found.
+- **Fix:** Build feature windows before running EDA, or run EDA without temporal
+  mode for a one-table snapshot.
+
+## Monthly Pipeline
+
+### Guardrail Failed
+
+- **Signal:** `run_churn_pipeline` ends with `guardrail_failed`.
+- **Meaning:** The candidate model did not meet minimum F0.5/PR-AUC quality.
+- **Fix:** Check `ml_monitor.run_log`, candidate metrics, CSKH label coverage,
+  and recent feature drift. If an accepted bundle exists, the system can still
+  score with that bundle in normal reject scenarios.
+
+### No CSKH Labels
+
+- **Signal:** Dataset prep logs no confirmed IDs from file or DB.
+- **Fix:** Provide `CSKH_DIR` or `CSKH_FILE_PATH`, or ensure a recent prototype
+  cache exists if fallback mode is allowed. A first production run needs CSKH
+  data to create a reliable prototype.
+
+### Risk List Is Empty
+
+- **Signal:** `data_static.churn_risk_predictions` receives zero rows.
+- **Fix:** Check score distribution, `threshold_used`, and
+  `CHURN_RISK_THRESHOLD_PCT`. A very strict threshold or degenerate candidate can
+  produce no flagged customers.
+
+## Kubernetes And Airflow
+
+### Pod CrashLoopBackOff Or OOMKilled
+
+- **Signal:** Airflow task pod exits repeatedly or Grafana reports memory limit
+  exceeded.
+- **Fix:** Inspect pod logs, then raise pod memory request/limit for the relevant
+  KubernetesPodOperator task. Heavy feature, EDA, and model jobs should run in
+  isolated pods rather than the scheduler container.
+
+### Windows HostPath Mount Error
+
+- **Signal:** Kubernetes reports `invalid mode: /churn_data` or fails to create
+  a container when mounting a Windows path.
+- **Fix:** Use Docker Desktop's Linux-style mount path, for example
+  `/run/desktop/mnt/host/d/...`, via `CHURN_DATA_HOST_PATH`.
+
+### Airflow Cannot Read Worker Logs
+
+- **Signal:** Airflow UI reports name resolution errors for a deleted pod.
+- **Fix:** Enable Airflow log persistence in Helm values, for example
+  `logs.persistence.enabled: true`, so the webserver does not depend on a pod
+  that Kubernetes has already removed.
+
+## Monitoring
+
+### Model Drift Warning
+
+- **Signal:** `ml_monitor.score_drift` shows an abnormal risk ratio or
+  `ml_monitor.feature_drift` shows high PSI/KS.
+- **Fix:** Validate the latest ingest batch, compare feature drift rows against
+  the accepted bundle profile, and rerun the monthly pipeline only after the
+  data issue is understood.
+
+### Grafana Shows No Container-Level CPU/Memory Locally
+
+- **Signal:** Kubernetes dashboard panels show limits/quotas but no utilization.
+- **Likely cause:** Docker Desktop exposes limited cAdvisor labels.
+- **Fix:** Use pod-level PromQL in Explore, such as:
+
+```promql
+sum(container_memory_usage_bytes{pod=~"churn-.*"}) by (pod)
+```
+
+```promql
+sum(irate(container_cpu_usage_seconds_total{namespace="default"}[5m])) by (pod)
+```

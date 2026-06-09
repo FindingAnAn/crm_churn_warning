@@ -23,12 +23,6 @@ from data.eda.report.baseline import compare_to_baseline, load_baseline, save_ba
 from data.eda.report.builder import EdaReport, build_eda_report, report_to_summary_dict
 from data.eda.report.persistence import persist_eda_report
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
 logger = logging.getLogger("eda_cli")
 
 
@@ -193,6 +187,10 @@ def main() -> int:
         from dotenv import load_dotenv
 
         load_dotenv()
+
+        from core.logging import configure_logging_from_env
+
+        configure_logging_from_env(app_name="eda")
 
         from core.database import get_engine
         from settings.database import PostgresConfig

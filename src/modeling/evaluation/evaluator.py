@@ -65,9 +65,25 @@ def evaluate_model(
         Dict with keys: f1, precision, recall, pr_auc, roc_auc, threshold,
         n_eval, n_pos, n_neg.
     """
+    y_true = ds.y_eval.values.astype(int)
+
+    if len(y_true) == 0:
+        logger.warning("Evaluation set is empty; returning guardrail-failing metrics")
+        return {
+            "f1": 0.0,
+            "f05": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "pr_auc": 0.0,
+            "roc_auc": 0.0,
+            "threshold": 1.0,
+            "n_eval": 0,
+            "n_pos": 0,
+            "n_neg": 0,
+        }
+
     deval = xgb.DMatrix(ds.x_eval, feature_names=ds.feature_names)
     y_prob = model.predict(deval)
-    y_true = ds.y_eval.values.astype(int)
 
     threshold = best_threshold_by_fbeta(y_true, y_prob, beta=0.5)
     y_pred = (y_prob >= threshold).astype(int)
@@ -80,7 +96,7 @@ def evaluate_model(
         "f05": float(fbeta_score(y_true, y_pred, beta=0.5, zero_division=0)),
         "precision": float(precision_score(y_true, y_pred, zero_division=0)),
         "recall": float(recall_score(y_true, y_pred, zero_division=0)),
-        "pr_auc": float(average_precision_score(y_true, y_prob)),
+        "pr_auc": float(average_precision_score(y_true, y_prob)) if n_pos > 0 else 0.0,
         "roc_auc": float(roc_auc_score(y_true, y_prob)) if n_pos > 0 and n_neg > 0 else 0.0,
         "threshold": float(threshold),
         "n_eval": len(y_true),

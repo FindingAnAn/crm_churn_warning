@@ -7,6 +7,9 @@ from sqlalchemy.engine import Engine
 
 from .ddl import DEFAULT_SCHEMA, ensure_monitoring_schema
 
+RUN_LOG_TABLE = "run_log"
+LEGACY_RUN_LOG_TABLE = "churn_ops_runs"
+
 
 def new_run_id() -> str:
     return str(uuid.uuid4())
@@ -25,8 +28,8 @@ def start_run(
     schema: str = DEFAULT_SCHEMA,
 ) -> None:
     ensure_monitoring_schema(engine, schema=schema)
-    q = text(f"""
-        INSERT INTO {schema}.churn_ops_runs (
+    q_template = f"""
+        INSERT INTO {schema}.{{table_name}} (
             run_id, status, horizon, risk_threshold_pct,
             prev_best_k, prev_best_f1, notes
         )
@@ -35,20 +38,19 @@ def start_run(
             :prev_best_k, :prev_best_f1, :notes
         )
         ON CONFLICT (run_id) DO NOTHING
-    """)
+    """
     with engine.begin() as conn:
-        conn.execute(
-            q,
-            {
-                "run_id": run_id,
-                "status": status,
-                "horizon": horizon,
-                "risk_threshold_pct": risk_threshold_pct,
-                "prev_best_k": prev_best_k,
-                "prev_best_f1": prev_best_f1,
-                "notes": notes,
-            },
-        )
+        payload = {
+            "run_id": run_id,
+            "status": status,
+            "horizon": horizon,
+            "risk_threshold_pct": risk_threshold_pct,
+            "prev_best_k": prev_best_k,
+            "prev_best_f1": prev_best_f1,
+            "notes": notes,
+        }
+        for table_name in (RUN_LOG_TABLE, LEGACY_RUN_LOG_TABLE):
+            conn.execute(text(q_template.format(table_name=table_name)), payload)
 
 
 def finish_run(
@@ -62,35 +64,37 @@ def finish_run(
     cand_is_accepted: bool | None = None,
     did_retrain: bool | None = None,
     did_score: bool | None = None,
+    accepted: bool | None = None,
     notes: str | None = None,
     schema: str = DEFAULT_SCHEMA,
 ) -> None:
     ensure_monitoring_schema(engine, schema=schema)
-    q = text(f"""
-        UPDATE {schema}.churn_ops_runs
+    q_template = f"""
+        UPDATE {schema}.{{table_name}}
         SET finished_at = now(),
             status = :status,
             window_end = COALESCE(:window_end, window_end),
             cand_best_k = COALESCE(:cand_best_k, cand_best_k),
             cand_best_f1 = COALESCE(:cand_best_f1, cand_best_f1),
             cand_is_accepted = COALESCE(:cand_is_accepted, cand_is_accepted),
+            accepted = COALESCE(:accepted, accepted),
             did_retrain = COALESCE(:did_retrain, did_retrain),
             did_score = COALESCE(:did_score, did_score),
             notes = COALESCE(:notes, notes)
         WHERE run_id = :run_id
-    """)
+    """
     with engine.begin() as conn:
-        conn.execute(
-            q,
-            {
-                "run_id": run_id,
-                "status": status,
-                "window_end": window_end,
-                "cand_best_k": cand_best_k,
-                "cand_best_f1": cand_best_f1,
-                "cand_is_accepted": cand_is_accepted,
-                "did_retrain": did_retrain,
-                "did_score": did_score,
-                "notes": notes,
-            },
-        )
+        payload = {
+            "run_id": run_id,
+            "status": status,
+            "window_end": window_end,
+            "cand_best_k": cand_best_k,
+            "cand_best_f1": cand_best_f1,
+            "cand_is_accepted": cand_is_accepted,
+            "accepted": accepted if accepted is not None else cand_is_accepted,
+            "did_retrain": did_retrain,
+            "did_score": did_score,
+            "notes": notes,
+        }
+        for table_name in (RUN_LOG_TABLE, LEGACY_RUN_LOG_TABLE):
+            conn.execute(text(q_template.format(table_name=table_name)), payload)

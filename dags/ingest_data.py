@@ -1,4 +1,4 @@
-"""DAG: ds_churn_ingest
+"""DAG: ingest_data
 
 Scans for new ZIP data files, loads them into the database,
 validates data quality, and triggers the features DAG.
@@ -14,13 +14,13 @@ from pendulum import datetime
 from runtime_config import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
 
 with DAG(
-    dag_id="ds_churn_ingest",
+    dag_id="ingest_data",
     start_date=datetime(2026, 1, 1, tz="Asia/Ho_Chi_Minh"),
     schedule="0 9 13,23 * *",
     catchup=False,
     max_active_runs=1,
     default_args={"retries": 2},
-    tags=["ds_churn", "ingest"],
+    tags=["churn", "ingestion"],
 ) as dag:
     volume = churn_data_volume()
     volume_mount = churn_data_mount()
@@ -30,7 +30,7 @@ with DAG(
         task_id="scan_and_ingest",
         name="churn-ingestion-pod",
         namespace="default",
-        image="churn_app:latest",
+        image=get_setting("CHURN_APP_IMAGE", "churn_app:latest"),
         image_pull_policy="IfNotPresent",
         cmds=["python", "-m", "data.ingestion.scanner"],
         env_vars={
@@ -48,7 +48,7 @@ with DAG(
 
     trigger_features = TriggerDagRunOperator(
         task_id="trigger_features",
-        trigger_dag_id="ds_churn_features",
+        trigger_dag_id="build_features",
         conf={
             "upstream_run_id": "{{ run_id }}",
             "logical_date": "{{ ds }}",
@@ -59,7 +59,7 @@ with DAG(
 
     trigger_eda = TriggerDagRunOperator(
         task_id="trigger_eda",
-        trigger_dag_id="ds_churn_eda",
+        trigger_dag_id="generate_eda_reports",
         conf={
             "upstream_run_id": "{{ run_id }}",
             "logical_date": "{{ ds }}",

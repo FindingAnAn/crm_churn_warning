@@ -1,31 +1,15 @@
 openapi: 3.0.3
 info:
-  title: Churn Prediction API
-  description: |
-    # TODO(author): Đặc tả API (OpenAPI/Swagger) cho dịch vụ Real-time Inference hoặc Data Serving của mô hình.
+  title: Churn Warning Batch Output Contract
   version: "1.0.0"
-servers:
-  - url: "http://localhost:8000"
-    description: "Thử nghiệm Local"
+  description: |
+    The current project does not expose a real-time HTTP prediction API.
+    Monthly scoring is executed by Airflow/Kubernetes jobs and writes results
+    to PostgreSQL table `data_static.churn_risk_predictions`.
 
-paths:
-  /predict:
-    post:
-      summary: Dữ liệu khách hàng
-      description: # TODO(author): API trả về dự đoán xác suất rời mạng (churn).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              # TODO(author): Define input schema (tuổi, số giao dịch, loại gói...)
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Dữ liệu input sai định dạng (Bad Request)
-
-# TODO(author): Khai báo models/schemas (Components) chuẩn hóa nếu cần thiết.
+    If an online API is added later, define concrete request/response schemas
+    here only after the server implementation exists.
+servers: []
+paths: {}
 components:
   schemas: {}

@@ -1,0 +1,1 @@
+"""Monthly pipeline compatibility entrypoints."""

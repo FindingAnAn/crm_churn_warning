@@ -1,4 +1,4 @@
-﻿# Hướng dẫn Triển khai Hệ thống (Deployment Guide)
+# Hướng dẫn Triển khai Hệ thống (Deployment Guide)
 
 > [!IMPORTANT]
 > Tài liệu này là "Nguồn chân lý" (Source of Truth) cho việc thiết lập môi trường Local và triển khai Production (Kubernetes/Helm). Mọi thay đổi về cấu trúc hạ tầng phải được cập nhật ngay tại đây.
@@ -75,7 +75,7 @@ helm repo update
 # Ánh xạ cổng để truy cập UI ở http://localhost:8080 (Tài khoản: admin / admin)
 kubectl port-forward svc/airflow-api-server 8080:8080 -n default
 ```
-Khi bạn bật DAG (ví dụ `ds_churn_pipeline`), K8s sẽ tạo Pod độc lập có tên dạng `churn-pipeline-pod-xxxxx` và xóa Pod sau khi task hoàn tất.
+Khi bạn bật DAG (ví dụ `run_churn_pipeline`), K8s sẽ tạo Pod độc lập có tên dạng `churn-pipeline-pod-xxxxx` và xóa Pod sau khi task hoàn tất.
 
 > [!NOTE]
 > Lưu ý về OS Path: Không hard-code `host_path` trong DAG. Cấu hình qua Airflow Variable hoặc biến môi trường `CHURN_DATA_HOST_PATH`; nếu test local trên Docker Desktop Windows thì giá trị thường có dạng Linux-node như `/run/desktop/mnt/host/d/...`.
@@ -128,3 +128,31 @@ helm upgrade --install airflow apache-airflow/airflow \
 - **Tiết kiệm tài nguyên:** Các task nặng chạy qua `KubernetesPodOperator` (dùng image `churn_app`) sẽ tự giải phóng Node Memory ngay sau khi hoàn tất.
 - Tham khảo thêm Alert và Dashboard tại `docs/operations/monitoring_guide.md`.
 
+---
+
+## Appendix A. Local kind Deployment Notes
+
+The Kubernetes-first local path can also run on `kind` when Docker Desktop Kubernetes is not used.
+
+Minimal flow:
+
+```bash
+kind create cluster --name churn-local
+
+docker build -t churn_app:latest -f infrastructure/docker/Dockerfile.app .
+docker build -t churn_app_airflow:latest -f infrastructure/docker/Dockerfile.airflow .
+
+kind load docker-image churn_app:latest --name churn-local
+kind load docker-image churn_app_airflow:latest --name churn-local
+
+kubectl create secret generic churn-db-secret --from-env-file=".env" -n default
+kubectl create secret generic airflow-git-ssh-key --from-file=gitSshKey="$HOME/.ssh/id_rsa_airflow_local" -n default
+
+helm upgrade --install airflow apache-airflow/airflow \
+  --namespace default \
+  -f infrastructure/helm/airflow/values.yaml \
+  -f infrastructure/helm/airflow/values-local.yaml
+```
+
+For host-mounted churn data, set `CHURN_DATA_HOST_PATH` to the Linux path visible inside the kind node. Keep
+`CHURN_DATA_MOUNT_PATH=/churn_data` so DAG code and application code share one stable in-container path.

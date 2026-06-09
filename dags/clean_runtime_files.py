@@ -1,5 +1,5 @@
 """
-DAG: ds_churn_housekeeping
+DAG: clean_runtime_files
 Dọn dẹp định kỳ các runtime folders
 Schedule: 03:00 hàng ngày
 """
@@ -27,7 +27,7 @@ BUNDLE_DIR="${CHURN_MODEL_DIR}/bundles"
 LOG_DIR="/opt/airflow/logs"
 DATA_ROOT="${CHURN_DATA_ROOT:-/churn_data}"
 
-echo "=== DS_CHURN Housekeeping - $(date) ==="
+echo "=== Churn Runtime Cleanup - $(date) ==="
 
 # 1. Bundle retention
 echo "[1] Cleaning old bundles at: ${BUNDLE_DIR}"
@@ -90,13 +90,13 @@ echo "=== Housekeeping Complete ==="
 '''
 
 with DAG(
-    dag_id="ds_churn_housekeeping",
+    dag_id="clean_runtime_files",
     start_date=datetime(2026, 1, 1, tz="Asia/Ho_Chi_Minh"),
     schedule="0 3 * * *",  # 03:00 hàng ngày
     catchup=False,
     max_active_runs=1,
     default_args={"retries": 0},
-    tags=["ds_churn", "maintenance"],
+    tags=["churn", "maintenance"],
 ) as dag:
 
     # Note: For logs sweeping, Airflow logs might be on a different PVC (or not needed locally if ephemeral pod)
@@ -109,12 +109,17 @@ with DAG(
         task_id="run_housekeeping_k8s",
         name="churn-housekeeping-pod",
         namespace="default",
-        image="churn_app:latest",
+        image=get_setting("CHURN_APP_IMAGE", "churn_app:latest"),
         image_pull_policy="IfNotPresent",
         cmds=["/bin/bash", "-c", HOUSEKEEPING_SCRIPT],
         env_vars={
             "CHURN_DATA_ROOT": data_root,
             "CHURN_MODEL_DIR": get_setting("CHURN_MODEL_DIR", f"{data_root}/models"),
+            "BUNDLE_KEEP_COUNT": get_setting("BUNDLE_KEEP_COUNT", "10"),
+            "LOG_RETENTION_DAYS": get_setting("LOG_RETENTION_DAYS", "30"),
+            "SAVED_RETENTION_DAYS": get_setting("SAVED_RETENTION_DAYS", "90"),
+            "FAIL_RETENTION_DAYS": get_setting("FAIL_RETENTION_DAYS", "30"),
+            "INCOMING_RETENTION_DAYS": get_setting("INCOMING_RETENTION_DAYS", "7"),
         },
         env_from=db_secret_ref(),
         volumes=[volume],

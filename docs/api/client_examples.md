@@ -1,45 +1,43 @@
-# API Client Examples
+# Batch Output Access Examples
 
-> [!NOTE]
-> Tài liệu này liệt kê các đoạn code mẫu (Snippets) gọi API của hệ thống (ví dụ: REST endpoint để predict, hoặc GraphQL query). 
+The current system is a monthly batch churn-warning pipeline, not a real-time
+HTTP prediction service. Consumers should read the latest action list from
+PostgreSQL after the pipeline finishes.
 
-## 1. Gọi API Dự đoán từ Python (Predict API)
+## PostgreSQL
 
-# TODO(author): API yêu cầu headers gì? Bearer Token / API Key?
+```sql
+SELECT
+    cms_code_enc,
+    churn_probability,
+    threshold_used,
+    reason_1,
+    reason_2,
+    reason_3,
+    scored_at,
+    window_end,
+    w_star,
+    horizon
+FROM data_static.churn_risk_predictions
+ORDER BY churn_probability DESC;
+```
+
+## Python
+
 ```python
-import requests
+import pandas as pd
+from sqlalchemy import create_engine
 
-url = "http://localhost:8000/predict"
-payload = {
-    "customer_id": "CUST_12345",
-    # TODO(author): bổ sung mock payload theo đúng schema.
-}
+engine = create_engine("postgresql+psycopg2://USER:PASSWORD@HOST:5432/DB")
 
-headers = {
-    "Content-Type": "application/json",
-    # "Authorization": "Bearer YOUR_TOKEN"
-}
+risk_list = pd.read_sql(
+    """
+    SELECT cms_code_enc, churn_probability, threshold_used, reason_1, reason_2, reason_3
+    FROM data_static.churn_risk_predictions
+    ORDER BY churn_probability DESC
+    """,
+    engine,
+)
 
-response = requests.post(url, json=payload, headers=headers)
-
-if response.status_code == 200:
-    print("Dự đoán Churn:", response.json())
-else:
-    print("Lỗi:", response.text)
+print(risk_list.head(20))
 ```
-
-## 2. Gọi bằng cURL (Terminal)
-
-# TODO(author): Copy lệnh curl tương đương để test nhanh trên Terminal.
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/predict' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "customer_id": "string"
-}'
-```
-
-## 3. Swagger UI
-# TODO(author): Link tới trang Swagger tự phát sinh (nếu dùng FastAPI) khi chạy dev. Ví dụ: `http://localhost:8000/docs`

@@ -1,37 +1,75 @@
-# Luồng Dữ Liệu (Data Flow)
+# Data Flow
 
-> [!NOTE]
-> Tài liệu này định nghĩa chi tiết cách dữ liệu chảy từ khi được sinh ra/thu thập cho đến khi tạo ra được file dự đoán (predictions) hoặc model artifacts.
+The pipeline is monthly batch processing. Every stage uses the same temporal
+contract: features are built as of `window_end`, labels look forward by the
+configured horizon, and scaling is fit on train data only.
 
-## 1. Vòng đời Dữ liệu Tổng quát (High-level Data Lifecycle)
-
-# TODO(author): Bổ sung sơ đồ Mermaid dạng flowchart mô tả tổng quan (ví dụ: Raw -> Cleaned -> Features -> Train/Test -> Model -> Inference).
+## Lifecycle
 
 ```mermaid
 flowchart TD
-    A[Raw Data (Zip/CSV)] --> B(Ingestion Pipeline)
-    B --> C[(Validated Data)]
-    C --> D(Feature Engineering Pipeline)
-    D --> E[(Feature Store / Parquet)]
-    E --> F{Model Training Pipeline}
-    F -->|Artifacts| G(MLflow Registry)
-    E --> H{Inference Pipeline}
-    H --> I[(Predictions DB)]
+    raw[Incoming ZIP/CSV files]
+    ingest[Ingest and validate]
+    source[(PostgreSQL source tables)]
+    features[Build lifetime and window features]
+    feature_store[(data_static and data_window)]
+    dataset[Dataset preparation]
+    train[Train and evaluate model]
+    gate[Guardrail and accept/reject]
+    score[Score active customers]
+    output[(data_static.churn_risk_predictions)]
+    monitor[(ml_monitor tables)]
+
+    raw --> ingest --> source --> features --> feature_store --> dataset
+    dataset --> train --> gate --> score --> output
+    dataset --> monitor
+    score --> monitor
+    gate --> monitor
 ```
 
-## 2. Chi tiết từng giai đoạn (Stage details)
+## Ingestion
 
-### 2.1. Ingestion (Thu thập)
-# TODO(author): Dữ liệu từ CSKH lấy theo định dạng nào? Lưu vào đâu? Ai trigger? Nếu có lỗi file (schema mismatch) xử lý thế nào?
+`ingest_data` scans the incoming data directory for ZIP files, extracts CSVs,
+validates schema, inserts rows into production source tables, and records an
+`ingest.ingest_log` entry. Failed files are copied to the failed-data directory
+with the original file preserved for retry.
 
-### 2.2. Preprocessing & Feature Engineering
-# TODO(author): Giải thích quá trình làm sạch. Đặc trưng tính theo công thức nào (Window nào? Cửa sổ xoay ra sao?).
+## Feature Engineering
 
-### 2.3. Model Training Data
-# TODO(author): Chiến lược chia tập Train/Test (Thời gian - Time-based split hay Random split?). 
+`build_features` constructs customer lifetime features and 1-6 month sliding
+window tables in PostgreSQL. Feature SQL is rendered and executed by the feature
+engineering package. Runtime paths and images come from Airflow variables or
+environment defaults in `dags/runtime_config.py`.
 
-### 2.4. Inference (Sinh điểm dự đoán)
-# TODO(author): Chạy định kỳ (Batch daily/weekly) hay Realtime? Dữ liệu đầu ra format là gì, lưu về bảng/file nào để đội CSKH lấy?
+## Dataset Preparation
 
-## 3. Chính sách làm sạch/Xóa dữ liệu (Data Retention)
-# TODO(author): Giữ file Raw bao lâu? (vd: 30 ngày) Models cũ giữ bao lâu?
+The dataset pipeline:
+
+- Detects the latest observation month and sets `window_end = T_obs - 1 month`.
+- Loads the working customer set as of `window_end` to avoid future activity
+  leakage.
+- Splits confirmed churn IDs into prototype/train and eval holdout sets.
+- Selects walk-forward window size `W*`.
+- Builds or loads the leading churn prototype.
+- Assigns pseudo labels, sample weights, and smoothed labels.
+- Fits the scaler on train rows only, then transforms eval and predict rows.
+
+## Training And Scoring
+
+`run_churn_pipeline` trains XGBoost, evaluates F0.5 and PR-AUC, applies model
+quality guardrails, and accepts only candidates that pass the production gate.
+If a candidate is rejected, the pipeline scores with the previously accepted
+bundle when one exists.
+
+The action list is written to `data_static.churn_risk_predictions` with
+`threshold_used`, `window_end`, `w_star`, and `horizon` so CSKH can trace which
+model/data window produced each list.
+
+## Monitoring And Retention
+
+Model-quality observability is stored in PostgreSQL under `ml_monitor`: run
+logs, score drift, feature drift, and backtests. Infrastructure health remains
+in Prometheus/Grafana.
+
+Housekeeping cleans runtime artifacts such as old bundles, logs, saved files,
+failed files, and incoming files according to the DAG retention settings.

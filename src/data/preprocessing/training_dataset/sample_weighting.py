@@ -8,7 +8,7 @@ training dataset (X_train, y_train, w_train, X_eval, y_eval).
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -34,6 +34,7 @@ class DatasetResult:
         scaler: Fitted StandardScaler (for inference reuse).
         feature_names: List of feature column names.
         active_df: Full active DataFrame with all metadata.
+        metadata: Run metadata such as observation month and selected W*.
     """
 
     x_train: pd.DataFrame
@@ -45,6 +46,7 @@ class DatasetResult:
     scaler: StandardScaler
     feature_names: list[str]
     active_df: pd.DataFrame
+    metadata: dict = field(default_factory=dict)
 
 
 LEAKAGE_FEATURE_KEYWORDS: tuple[str, ...] = (

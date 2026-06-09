@@ -13,12 +13,6 @@ import os
 import sys
 from pathlib import Path
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
 logger = logging.getLogger("churn_pipeline")
 
 
@@ -33,8 +27,13 @@ def main() -> int:
 
         load_dotenv()
 
+        from core.logging import configure_logging_from_env
+
+        configure_logging_from_env(app_name="churn_pipeline")
+
         from core.database import get_engine
         from data.preprocessing.training_dataset.pipeline_config import DatasetPipelineConfig
+        from modeling.config.model_config import ModelConfig
         from pipelines.churn.pipeline import run_churn_pipeline
         from settings.database import PostgresConfig
 
@@ -58,15 +57,20 @@ def main() -> int:
             logger.warning("No CSKH_DIR or CSKH_FILE_PATH set — will try DB or fallback")
 
         pipeline_config = DatasetPipelineConfig(
+            horizon_months=int(os.environ.get("CHURN_PREDICTION_HORIZON_MONTHS", "2")),
             cskh_file_path=Path(cskh_path) if cskh_path else None,
             cskh_dir=Path(cskh_dir) if cskh_dir else None,
         )
+        model_config_kwargs = {}
+        if os.environ.get("CHURN_RISK_THRESHOLD_PCT"):
+            model_config_kwargs["risk_threshold_pct"] = float(os.environ["CHURN_RISK_THRESHOLD_PCT"])
 
         bundle_dir = os.environ.get("CHURN_MODEL_DIR")
 
         summary = run_churn_pipeline(
             engine,
             pipeline_config=pipeline_config,
+            model_config=ModelConfig(**model_config_kwargs),
             bundle_dir=Path(bundle_dir) / "bundles" / "latest" if bundle_dir else None,
         )
 

@@ -39,10 +39,16 @@ def get_setting(name: str, default: str) -> str:
         config_mapping = {
             "CHURN_MODEL_SCHEDULE": "model.model_schedule",
             "CHURN_MODEL_DIR": "model.model_dir",
+            "CHURN_PREDICTION_HORIZON_MONTHS": "model.prediction_horizon_months",
+            "CHURN_RISK_THRESHOLD_PCT": "model.risk_threshold_pct",
+            "ML_MONITOR_SCHEMA": "monitoring.schema",
+            "ML_MONITOR_FEATURE_BINS": "monitoring.feature_bins",
+            "ML_MONITOR_MAX_FEATURES": "monitoring.max_features",
             "CHURN_DATA_HOST_PATH": "infrastructure.churn_data_host_path",
             "CHURN_DATA_MOUNT_PATH": "infrastructure.churn_data_mount_path",
             "CHURN_DB_SECRET_NAME": "infrastructure.churn_db_secret_name",
-            "CSKH_FILE_PATH": "file_system.cskh_dir",
+            "CHURN_APP_IMAGE": "infrastructure.churn_app_image",
+            "CSKH_DIR": "file_system.cskh_dir",
         }
         
         if name in config_mapping:

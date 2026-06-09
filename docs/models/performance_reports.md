@@ -1,25 +1,52 @@
-# Báo cáo Hiệu năng (Performance Reports)
+# Performance Reports
 
-## Model Version: # TODO(author): (e.g. v1.0.0)
-## Evaluation Date: # TODO(author): (e.g. 2026-04-15)
+This project does not hard-code a static performance report because every
+monthly run may accept or reject a candidate model. The authoritative metrics
+are stored with the accepted bundle and in PostgreSQL monitoring/config tables.
 
-## 1. Kết quả Metrics (Overall Metrics)
-| Metric | Giá trị (Value) | Target | Pass/Fail |
-|--------|----------------|--------|-----------|
-| ROC-AUC | # TODO | > 0.8  |           |
-| F1-Score | # TODO | > 0.7  |           |
-| Precision | # TODO |        |           |
-| Recall | # TODO | > 0.75 |           |
+## Primary Metrics
 
-## 2. Ma trận nhầm lẫn (Confusion Matrix)
-# TODO(author): Copy paste ma trận (có thể vẽ bảng markdown).
-|          | Predicted_No_Churn | Predicted_Churn |
-|----------|--------------------|-----------------|
-| **Actual_No_Churn** | TN | FP |
-| **Actual_Churn**    | FN | TP |
+| Metric | Source | Purpose |
+|---|---|---|
+| F0.5 | `data_static.model_best_config.metric_f2_val` and bundle metadata | Precision-focused accept/reject metric |
+| PR-AUC | `data_static.model_best_config.metric_roc_auc_val` and bundle metadata | Ranking quality under class imbalance |
+| Threshold | `best_threshold` and risk table `threshold_used` | Cutoff selected during evaluation and adjusted for risk-list size |
+| Risk ratio | `ml_monitor.score_drift.risk_ratio` | Detect abnormal list-size changes |
+| Feature PSI/KS | `ml_monitor.feature_drift` | Detect feature distribution drift |
 
-## 3. Đặc trưng quan trọng (Feature Importance)
-# TODO(author): Liệt kê Top 5-10 Feature có ảnh hưởng lớn nhất. (SHAP values hoặc Gini / Gain).
+## Report Query
 
-## 4. Phân tích lỗi (Error Analysis)
-# TODO(author): Tại sao mô hình hay sai sót ở nhóm người dùng nào? Mảng khách hàng nào có FP/FN cao bất thường?
+```sql
+SELECT
+    as_of_month,
+    horizon,
+    best_k,
+    best_threshold,
+    metric_f2_val AS f05,
+    metric_roc_auc_val AS pr_auc,
+    is_accepted,
+    accept_rule,
+    accepted_at,
+    notes
+FROM data_static.model_best_config
+ORDER BY as_of_month DESC, horizon;
+```
+
+## Confusion Matrix
+
+Confusion-matrix style reporting should be generated only when a future label
+window has closed. Until then, use PR-AUC/F0.5 on the held-out confirmed set and
+precision-in-list backtests from `ml_monitor.backtest`.
+
+## Feature Importance
+
+Accepted bundles store XGBoost gain-based feature importance. Use the bundle
+metadata for portfolio/model-card snapshots, and avoid manually copying stale
+feature rankings into this document.
+
+## Error Analysis
+
+When backtest labels become available, compare false positives and false
+negatives by recency tier, service mix, revenue band, and complaint/satisfaction
+signals. Record findings in a dated report rather than editing this contract
+file with one-off numbers.

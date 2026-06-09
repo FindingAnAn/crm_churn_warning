@@ -1,4 +1,4 @@
-"""Configuration package for DS Churn pipeline.
+"""Configuration package for Churn Warning pipeline.
 
 This package provides environment-aware configuration management.
 
@@ -30,7 +30,7 @@ from config.settings import (
     get_config,
     get_database_config,
     get_file_system_config,
-    get_logging_config,
+    get_monitoring_config,
 )
 
 __all__ = [
@@ -42,7 +42,7 @@ __all__ = [
     "get_config",
     "get_database_config",
     "get_file_system_config",
-    "get_logging_config",
+    "get_monitoring_config",
     "DEFAULTS",
     "DEVELOPMENT",
     "PRODUCTION",

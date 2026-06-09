@@ -11,7 +11,8 @@ def ensure_monitoring_schema(engine: Engine, schema: str = DEFAULT_SCHEMA) -> No
     Create monitoring schema + core tables (Postgres).
 
     Tables:
-      - <schema>.churn_ops_runs   (run log / audit)
+      - <schema>.run_log          (run log / audit)
+      - <schema>.churn_ops_runs   (legacy run log / audit)
       - <schema>.feature_drift
       - <schema>.score_drift
       - <schema>.backtest
@@ -19,7 +20,7 @@ def ensure_monitoring_schema(engine: Engine, schema: str = DEFAULT_SCHEMA) -> No
     ddl = f"""
     CREATE SCHEMA IF NOT EXISTS {schema};
 
-    CREATE TABLE IF NOT EXISTS {schema}.churn_ops_runs (
+    CREATE TABLE IF NOT EXISTS {schema}.run_log (
         run_id            TEXT PRIMARY KEY,
         started_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
         finished_at       TIMESTAMPTZ,
@@ -35,12 +36,40 @@ def ensure_monitoring_schema(engine: Engine, schema: str = DEFAULT_SCHEMA) -> No
         cand_best_k       INT,
         cand_best_f1      DOUBLE PRECISION,
         cand_is_accepted  BOOLEAN,
+        accepted          BOOLEAN,
 
         did_retrain       BOOLEAN,
         did_score         BOOLEAN,
 
         notes             TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS {schema}.churn_ops_runs (
+        run_id            TEXT PRIMARY KEY,
+        started_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+        finished_at       TIMESTAMPTZ,
+        status            TEXT NOT NULL,
+
+        window_end        INT,
+        horizon           INT,
+        risk_threshold_pct INT,
+
+        prev_best_k       INT,
+        prev_best_f1      DOUBLE PRECISION,
+
+        cand_best_k       INT,
+        cand_best_f1      DOUBLE PRECISION,
+        cand_is_accepted  BOOLEAN,
+        accepted          BOOLEAN,
+
+        did_retrain       BOOLEAN,
+        did_score         BOOLEAN,
+
+        notes             TEXT
+    );
+
+    ALTER TABLE {schema}.run_log ADD COLUMN IF NOT EXISTS accepted BOOLEAN;
+    ALTER TABLE {schema}.churn_ops_runs ADD COLUMN IF NOT EXISTS accepted BOOLEAN;
 
     CREATE TABLE IF NOT EXISTS {schema}.feature_drift (
         window_end        INT NOT NULL,
@@ -107,6 +136,8 @@ def ensure_monitoring_schema(engine: Engine, schema: str = DEFAULT_SCHEMA) -> No
         PRIMARY KEY (pred_window_end, horizon)
     );
 
+    CREATE INDEX IF NOT EXISTS idx_run_log_started_at ON {schema}.run_log (started_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_churn_ops_runs_started_at ON {schema}.churn_ops_runs (started_at DESC);
     CREATE INDEX IF NOT EXISTS idx_score_drift_created_at ON {schema}.score_drift (created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_feature_drift_created_at ON {schema}.feature_drift (created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_backtest_created_at ON {schema}.backtest (created_at DESC);

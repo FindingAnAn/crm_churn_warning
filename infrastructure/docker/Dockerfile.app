@@ -44,6 +44,7 @@ COPY --from=builder --chown=appuser:appgroup /root/.local /home/appuser/.local
 
 # Copy application source code
 COPY --chown=appuser:appgroup src/ ./src/
+COPY --chown=appuser:appgroup config/ ./src/config/
 COPY --chown=appuser:appgroup scripts/ ./scripts/
 
 # Ensure logs directory exists and appuser has permissions for /app
