@@ -11,11 +11,13 @@ crm_churn_warning/
 ├── dags/                    # Airflow DAGs and DAG-local helpers
 ├── src/                     # Importable production code
 ├── tests/                   # Unit and regression tests
+├── config/                  # Runtime configuration documentation
+├── scripts/                 # Operational entrypoints
 ├── docs/                    # Architecture, model, API, operations docs
 ├── infrastructure/
 │   ├── docker/              # Dockerfiles and local compose
+│   ├── grafana/             # Provisioned dashboards
 │   └── helm/                # Helm values
-├── model_bundles/           # Model artifacts
 ├── data/                    # Local data mount only, ignored by git
 ├── pyproject.toml
 ├── requirements.txt
@@ -28,11 +30,17 @@ crm_churn_warning/
 |---|---|---|
 | DAG orchestration | `dags/` | Thin entrypoints. No business logic. |
 | Data ingestion | `src/data/ingestion/` | ZIP scan, validation, DB load. |
-| Dataset prep | `src/data/preprocessing/dataset_prep/` | Time-aware labels, split, weights. |
+| Training dataset | `src/data/preprocessing/training_dataset/` | Time-aware labels, split, weights. |
 | Feature generation | `src/features/engineering/` | PostgreSQL/Spark feature build logic. |
-| Modeling | `src/modeling/` | Train, evaluate, score, export. |
+| Model training | `src/modeling/training/` | Model fitting only. |
+| Model evaluation | `src/modeling/evaluation/` | Metrics, guardrails, accept/reject. |
+| Model serving | `src/modeling/serving/` | Batch scoring and risk-table output. |
+| Pipeline | `src/pipelines/churn/` | End-to-end application orchestration. |
 | Monitoring | `src/monitoring/` | Model quality and drift checks. |
 | Deployment | `infrastructure/` | Docker, Helm, Kubernetes config. |
+
+Generated datasets, model bundles, logs, and experiment artifacts are runtime
+outputs and are excluded from Git.
 
 ## Scheduling
 
@@ -43,3 +51,9 @@ CHURN_MODEL_SCHEDULE="0 5 * * 6"
 ```
 
 The schedule and Kubernetes data mount paths are runtime settings, not hard-coded constants.
+
+## References
+
+- [Python Packaging User Guide: src layout](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
+- [Cookiecutter Data Science](https://drivendata.github.io/cookiecutter-data-science/)
+- [Kedro architecture overview](https://docs.kedro.org/en/stable/getting-started/architecture_overview/)

@@ -4,8 +4,7 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from pendulum import datetime
-
-from common import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
+from runtime_config import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
 
 with DAG(
     dag_id="ds_churn_pipeline",
@@ -16,26 +15,30 @@ with DAG(
     default_args={"retries": 0},
     tags=["ds_churn", "pipeline", "model", "k8s"],
     doc_md="""
-    ## DS Churn Pipeline v2 (Kubernetes Native)
+    ## DS Churn Pipeline
 
-    Runs the full monthly churn prediction pipeline inside an isolated Kubernetes Pod.
+    Runs the full churn training and scoring pipeline every week at 05:00.
     """,
 ) as dag:
     volume = churn_data_volume()
     volume_mount = churn_data_mount()
+    data_root = volume_mount.mount_path
 
     run_pipeline = KubernetesPodOperator(
-        task_id="run_monthly_v2_k8s_pod",
-        name="churn-pipeline-v2-pod",
-        namespace="default", # Or the namespace configured for your local K8s
+        task_id="run_churn_pipeline",
+        name="churn-pipeline-pod",
+        namespace="default",
         image="churn_app:latest",
         image_pull_policy="IfNotPresent",
-        cmds=["python", "-m", "pipelines.monthly.monthly_v2_cli"],
+        cmds=["python", "-m", "pipelines.churn.cli"],
         env_vars={
             "TZ": "Asia/Ho_Chi_Minh",
             "PYTHONUNBUFFERED": "1",
-            "CSKH_FILE_PATH": get_setting("CSKH_FILE_PATH", "/churn_data/cskh/confirmed_churners.csv"),
-            "CHURN_MODEL_DIR": get_setting("CHURN_MODEL_DIR", "/churn_data/models"),
+            "CSKH_FILE_PATH": get_setting(
+                "CSKH_FILE_PATH",
+                f"{data_root}/cskh/confirmed_churners.csv",
+            ),
+            "CHURN_MODEL_DIR": get_setting("CHURN_MODEL_DIR", f"{data_root}/models"),
         },
         env_from=db_secret_ref(),
         volumes=[volume],

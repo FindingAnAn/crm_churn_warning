@@ -8,12 +8,10 @@ Bao gồm:
   - Transform logic cho từng cột
 """
 
-from typing import Dict, List, Tuple
-
 # ============================================================
 # BCCP_ORDERITEM Schema
 # ============================================================
-BCCP_ORDERITEM_COLUMNS: List[Tuple[str, str, int]] = [
+BCCP_ORDERITEM_COLUMNS: list[tuple[str, str, int]] = [
     # (column_name, data_type, position)
     ("crm_code_enc", "VARCHAR(20)", 1),
     ("cms_code_enc", "VARCHAR(20)", 2),
@@ -63,7 +61,7 @@ BCCP_ORDERITEM_COLUMNS: List[Tuple[str, str, int]] = [
 # ============================================================
 # CMS_COMPLAINT Schema
 # ============================================================
-CMS_COMPLAINT_COLUMNS: List[Tuple[str, str, int]] = [
+CMS_COMPLAINT_COLUMNS: list[tuple[str, str, int]] = [
     ("cms_code_enc", "VARCHAR(20)", 1),
     ("item_code", "VARCHAR(20)", 2),
     ("create_complaint_date", "DATETIME", 3),
@@ -79,7 +77,7 @@ CMS_COMPLAINT_COLUMNS: List[Tuple[str, str, int]] = [
 # ============================================================
 # CAS_CUSTOMER Schema
 # ============================================================
-CAS_CUSTOMER_COLUMNS: List[Tuple[str, str, int]] = [
+CAS_CUSTOMER_COLUMNS: list[tuple[str, str, int]] = [
     ("cms_code_enc", "VARCHAR(20)", 1),
     ("report_month", "DATE", 2),  # YYYY-MM-DD format
     ("item_count", "BIGINT", 3),
@@ -127,7 +125,7 @@ CAS_CUSTOMER_COLUMNS: List[Tuple[str, str, int]] = [
 # ============================================================
 # CAS_INFO Schema
 # ============================================================
-CAS_INFO_COLUMNS: List[Tuple[str, str, int]] = [
+CAS_INFO_COLUMNS: list[tuple[str, str, int]] = [
     ("cms_code_enc", "VARCHAR(20)", 1),
     ("crm_code_enc", "VARCHAR(20)", 2),
     ("cus_province", "INT", 3),
@@ -144,7 +142,7 @@ CAS_INFO_COLUMNS: List[Tuple[str, str, int]] = [
 # ============================================================
 # Mapping function
 # ============================================================
-TABLE_SCHEMAS: Dict[str, List[Tuple[str, str, int]]] = {
+TABLE_SCHEMAS: dict[str, list[tuple[str, str, int]]] = {
     "bccp_orderitem": BCCP_ORDERITEM_COLUMNS,
     "cms_complaint": CMS_COMPLAINT_COLUMNS,
     "cas_customer": CAS_CUSTOMER_COLUMNS,
@@ -152,13 +150,13 @@ TABLE_SCHEMAS: Dict[str, List[Tuple[str, str, int]]] = {
 }
 
 
-def get_table_schema(table_base: str) -> List[Tuple[str, str, int]]:
+def get_table_schema(table_base: str) -> list[tuple[str, str, int]]:
     """
     Lấy schema của bảng.
-    
+
     Args:
         table_base: "bccp_orderitem", "cms_complaint", "cas_customer", "cas_info"
-    
+
     Returns:
         List của (column_name, data_type, position)
     """
@@ -167,7 +165,7 @@ def get_table_schema(table_base: str) -> List[Tuple[str, str, int]]:
     return TABLE_SCHEMAS[table_base]
 
 
-def get_canonical_column_names(table_base: str) -> List[str]:
+def get_canonical_column_names(table_base: str) -> list[str]:
     """Lấy danh sách tên cột chính thức theo thứ tự."""
     schema = get_table_schema(table_base)
     return [col_name for col_name, _, _ in schema]
@@ -182,7 +180,7 @@ def get_column_datatype(table_base: str, column_name: str) -> str:
     raise ValueError(f"Column {column_name} not found in {table_base}")
 
 
-def get_column_by_position(table_base: str, position: int) -> Tuple[str, str]:
+def get_column_by_position(table_base: str, position: int) -> tuple[str, str]:
     """Lấy tên cột và kiểu theo vị trí (1-indexed)."""
     schema = get_table_schema(table_base)
     for col_name, dtype, pos in schema:
@@ -194,15 +192,15 @@ def get_column_by_position(table_base: str, position: int) -> Tuple[str, str]:
 def get_prod_table_ddl(table_base: str, table_name: str, prod_schema: str = "public") -> str:
     """
     Generate CREATE TABLE statement cho production table với đúng data types.
-    
+
     Args:
         table_base: "bccp_orderitem", "cms_complaint", "cas_customer", "cas_info"
         table_name: Full table name (e.g., "public.bccp_orderitem")
         prod_schema: Schema name (default: "public")
-    
+
     Returns:
         CREATE TABLE SQL statement
-    
+
     Example:
         >>> ddl = get_prod_table_ddl("cms_complaint", "cms_complaint", "public")
         >>> print(ddl)
@@ -213,11 +211,11 @@ def get_prod_table_ddl(table_base: str, table_name: str, prod_schema: str = "pub
         );
     """
     schema = get_table_schema(table_base)
-    
+
     # Build column definitions
     cols = [f'"{col_name}" {dtype}' for col_name, dtype, _ in schema]
     col_list = ",\n    ".join(cols)
-    
+
     return f"""CREATE TABLE IF NOT EXISTS {table_name} (
     {col_list}
 );"""

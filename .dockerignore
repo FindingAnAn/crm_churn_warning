@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.venv
+__pycache__
+*.py[cod]
+.pytest_cache
+tests
+docs
+data
+logs
+model_bundles
+artifacts
+mlruns
+wandb

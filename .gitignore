@@ -32,6 +32,7 @@ config/.env.*
 
 # ── Data & Artifacts (.gitignored) ─────
 artifacts/
+/model_bundles/
 /data/                  # root-level data/ only (CSV từ DE, local dev)
 !src/data/              # KEEP: src/data/ là Python source code
 logs/

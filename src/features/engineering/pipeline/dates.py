@@ -8,8 +8,8 @@ import re
 import pandas as pd
 from sqlalchemy import text
 
-from src.features.engineering.config.app_config import get_config
-from src.features.engineering.logging_config import get_logger
+from features.engineering.config.app_config import get_config
+from features.engineering.logging_config import get_logger
 
 logger = get_logger('pipeline_dates')
 

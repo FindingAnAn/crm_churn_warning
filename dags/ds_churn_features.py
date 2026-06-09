@@ -1,7 +1,6 @@
 """DAG: ds_churn_features
 
-Generates sliding-window features from ingested data and triggers
-the downstream pipeline DAG.
+Generates sliding-window features from ingested data.
 
 Schedule: None (triggered by ds_churn_ingest)
 """
@@ -10,8 +9,7 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from pendulum import datetime
-
-from common import churn_data_mount, churn_data_volume, db_secret_ref
+from runtime_config import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
 
 with DAG(
     dag_id="ds_churn_features",
@@ -31,7 +29,13 @@ with DAG(
         namespace="default",
         image="churn_app:latest",
         image_pull_policy="IfNotPresent",
-        cmds=["python", "-m", "features.engineering.cli.generate", "--start", "2025-01-01"],
+        cmds=[
+            "python",
+            "-m",
+            "features.engineering.cli.generate",
+            "--start",
+            get_setting("FEATURE_START_DATE", "2025-01-01"),
+        ],
         env_vars={
             "WINDOW_SCHEMA": "data_window",
             "TZ": "Asia/Ho_Chi_Minh",

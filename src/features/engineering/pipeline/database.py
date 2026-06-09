@@ -6,10 +6,9 @@ import os
 
 from sqlalchemy import create_engine, text
 
-from src.features.engineering.libs.database import PostgresConfig
-from src.features.engineering.libs.db_utils import ensure_public_table_columns_exist
-from src.features.engineering.libs.db_utils import ensure_public_tables_exist
-from src.features.engineering.logging_config import get_logger
+from settings.database import PostgresConfig
+from features.engineering.database_utils import ensure_public_table_columns_exist, ensure_public_tables_exist
+from features.engineering.logging_config import get_logger
 
 logger = get_logger("pipeline_database")
 
@@ -22,12 +21,12 @@ REQUIRED_COLUMNS = {
 
 def build_database_url(database_url: str | None = None) -> str:
     if database_url:
-        logger.info(f"Using provided database URL")
+        logger.info("Using provided database URL")
         return database_url
 
     env_database_url = os.environ.get("DATABASE_URL")
     if env_database_url:
-        logger.info(f"Using DATABASE_URL from environment")
+        logger.info("Using DATABASE_URL from environment")
         return env_database_url
 
     cfg = PostgresConfig.from_env()

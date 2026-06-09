@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
-
 
 ENGINEERING_ROOT = Path(__file__).resolve().parent
 
@@ -30,7 +30,7 @@ def get_repo_root() -> Path:
 
 def get_engineering_logs_dir() -> Path:
     """Return the engineering logs directory."""
-    return ENGINEERING_ROOT / "logs"
+    return Path(os.getenv("LOGS_DIR", REPO_ROOT / "logs"))
 
 
 def get_engineering_sql_dir() -> Path:

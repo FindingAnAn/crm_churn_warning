@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import os
 
-from src.features.engineering.paths import get_engineering_root
-from src.features.engineering.paths import get_repo_root
+from features.engineering.paths import get_engineering_root, get_repo_root
 
 ENGINEERING_ROOT = get_engineering_root()
 REPO_ROOT = get_repo_root()

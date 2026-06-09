@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 
+
 def _find_repo_root() -> Path:
     current = Path(__file__).resolve()
     for candidate in current.parents:
@@ -17,8 +18,8 @@ REPO_ROOT = _find_repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.features.engineering.config.env_loader import load_project_env_files
-from src.features.engineering.pipeline.pipeline import run
+from features.engineering.config.env_loader import load_project_env_files
+from features.engineering.pipeline.pipeline import run
 
 
 def _to_bool(value: str | None) -> bool:

@@ -1,6 +1,6 @@
 """DDL for the ``eda_reports`` schema.
 
-``monitoring.model_quality.monitoring.ddl.ensure_monitoring_schema``.
+``monitoring.model_quality.ddl.ensure_monitoring_schema``.
 """
 
 from __future__ import annotations

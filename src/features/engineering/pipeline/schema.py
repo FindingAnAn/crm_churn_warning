@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from src.features.engineering.logging_config import get_logger
+from features.engineering.logging_config import get_logger
 
 logger = get_logger("pipeline_schema")
 

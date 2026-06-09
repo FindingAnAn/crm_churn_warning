@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-from data.preprocessing.dataset_prep.pipeline_config import NUMERIC_FEATURES
+from data.preprocessing.training_dataset.pipeline_config import NUMERIC_FEATURES
 
 
 def _default_features() -> list[str]:

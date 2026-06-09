@@ -35,9 +35,6 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.4",
 ]
-scheduler = [
-    "apscheduler>=3.10,<4",
-]
 spark = [
     "pyspark>=3.5,<4",
 ]
@@ -85,4 +82,4 @@ ignore = [
 "tests/**/*.py" = ["S101", "T201"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "shared", "data", "modeling", "monitoring", "features", "pipelines"]
+known-first-party = ["settings", "core", "data", "modeling", "monitoring", "features", "pipelines"]

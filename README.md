@@ -1,4 +1,4 @@
-﻿# DS Churn — Hệ thống Dự đoán Rời bỏ Khách hàng
+# DS Churn — Hệ thống Dự đoán Rời bỏ Khách hàng
 
 Hệ thống ML pipeline end-to-end dự đoán khách hàng có nguy cơ rời bỏ (churn) dịch vụ chuyển phát, được thiết kế theo kiến trúc **Modular Monolith** và orchestrate qua **Apache Airflow** trên **Kubernetes**.
 
@@ -26,7 +26,7 @@ ds_churn_pipeline -> weekly 05:00 model run
 `ds_churn_pipeline` là DAG model weekly hiện tại, mặc định chạy thứ Bảy 05:00:
 
 ```bash
-python -m pipelines.monthly.monthly_v2_cli
+python -m pipelines.churn.cli
 ```
 
 Legacy contract tương đương trong tài liệu cũ là `ds_churn_model_monthly` với `modeling/main.py run-monthly --horizon 2 --risk-threshold-pct 95`.
@@ -229,44 +229,41 @@ ds_churn/
 │   └── ds_churn_housekeeping.py    #   Scheduled: cleanup old bundles
 │
 ├── src/                            # Source code (pip install -e .)
-│   ├── config/                     #   Centralized config (Pydantic-based)
-│   │   ├── settings.py             #     Root AppSettings (composes all subsystem configs)
-│   │   ├── db_config.py            #     PostgresConfig (PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PW)
+│   ├── settings/                   #   Typed application configuration
+│   │   ├── application.py          #     Root AppSettings
+│   │   ├── database.py             #     PostgresConfig (PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PW)
 │   │   └── paths.py                #     FSConfig (INCOMING/SAVED/FAIL_DIR) + ModelPathsConfig
-│   ├── shared/                     #   Shared utilities
-│   │   ├── db.py                   #     get_engine() — SQLAlchemy engine factory
-│   │   └── logging_config.py       #     configure_logging() — rotating file + console
+│   ├── core/                       #   Database and logging infrastructure
 │   ├── data/
-│   │   ├── ingestion/              #   Data extraction and loading logic
-│   │   ├── preprocessing/          #   Data handling logic (transformations)
-│   │   │   └── dataset_prep/       #   13 modules (scope→tier→EWMA→W*→prototype→pseudo→weight→sanity)
-│   │   └── validation/             #   Data quality checks (schema validation)
+│   │   ├── ingestion/              #   adapters, operations, jobs, scanner
+│   │   ├── preprocessing/
+│   │   │   └── training_dataset/   #   time-aware labels, split, weights, sanity checks
+│   │   └── validation/             #   canonical CSV and table schemas
 │   ├── features/
 │   │   └── engineering/
-│   │       └── feature_gen/        #   Sliding window SQL + aggregation
+│   │       ├── aggregation/        #   static and window aggregation
+│   │       ├── pipeline/           #   feature workflow
+│   │       └── sql/                #   SQL templates
 │   ├── modeling/
 │   │   ├── config/                 #   ModelConfig (XGBoost hyperparams)
-│   │   ├── train/                  #   trainer, evaluator, guardrail
-│   │   ├── export/                 #   scorer, risk_table
-│   │   ├── common/                 #   artifacts (save/load bundles via joblib)
-│   │   └── config_store/           #   best_config (accept/reject history in DB)
+│   │   ├── training/               #   model fitting
+│   │   ├── evaluation/             #   metrics and acceptance guardrails
+│   │   └── serving/                #   scoring and risk-table output
 │   ├── pipelines/
-│   │   └── monthly/                #   monthly_v2.py & monthly_v2_cli.py (8-step orchestrator)
+│   │   └── churn/                  #   end-to-end pipeline and CLI
 │   └── monitoring/                 #   Production monitoring
 │       ├── data_quality/           #     Data quality monitoring
 │       └── model_quality/          #     Model quality monitoring
 │
-├── infrastructure/                 # Deployment configs
-│   └── docker/                     # Dockerfiles + local compose
-│
-├── data/                           # Data storage (mount data volumes)
-├── logs/                           # Runtime logs
-├── tests/                          # Unit tests (105 tests)
+├── config/                         # Runtime configuration documentation
+├── scripts/database/               # Operational database entrypoints
+├── tests/unit/                     # Tests grouped by source domain
 ├── infrastructure/                 # Docker + Helm charts
 │   ├── docker/
 │   │   ├── Dockerfile.app          #   Application image (churn_app:latest)
 │   │   ├── Dockerfile.airflow      #   Airflow image
 │   │   └── docker-compose.yaml     #   Local development stack
+│   ├── grafana/dashboards/         # Versioned Grafana dashboards
 │   └── helm/
 │       ├── airflow/                #   Airflow Helm values (values.yaml + values-local.yaml)
 │       └── monitoring/             #   Kube-prometheus-stack Helm values
@@ -278,7 +275,7 @@ ds_churn/
 │   ├── adr/                        #   Architecture Decision Records
 │   └── api/                        #   API spec + client examples
 │
-├── Coding_conventions/             # Project coding standards (18 files)
+├── docs/conventions/               # Project coding standards
 ├── pyproject.toml                  # Packaging & tool config
 └── .env                            # Database credentials (not committed)
 ```
@@ -700,15 +697,16 @@ kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
 export PYTHONPATH=src
 
 # Chạy full pipeline
-python -m pipelines.monthly.monthly_v2_cli
+python -m pipelines.churn.cli
 
-# Chỉ chạy dataset_prep (debug)
+# Chỉ chạy bước tạo training dataset (debug)
 python -c "
-from shared.db import get_engine
-from data.preprocessing.dataset_prep.pipeline_config import DatasetPipelineConfig
-from data.preprocessing.dataset_prep.run_dataset_pipeline import run_dataset_pipeline
+from settings.database import PostgresConfig
+from core.database import get_engine
+from data.preprocessing.training_dataset.pipeline_config import DatasetPipelineConfig
+from data.preprocessing.training_dataset.run_dataset_pipeline import run_dataset_pipeline
 
-engine = get_engine()
+engine = get_engine(PostgresConfig.from_env())
 config = DatasetPipelineConfig(horizon_months=2)
 result = run_dataset_pipeline(engine, config)
 print(f'Train: {len(result.x_train)}, Eval: {len(result.x_eval)}')
@@ -911,9 +909,9 @@ stdlib → third-party → project modules
 
 Hướng phụ thuộc (dependency direction):
 ```
-interface → application → domain ← infrastructure
-                              ↑
-                              └── shared/
+dags/CLI → pipelines → data/features/modeling
+                         ↓
+                    settings/core
 ```
 
 ---

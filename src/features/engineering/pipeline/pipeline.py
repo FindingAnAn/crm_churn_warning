@@ -4,18 +4,14 @@ from __future__ import annotations
 
 import argparse
 
-from src.features.engineering.config.app_config import get_config
-from src.features.engineering.paths import get_engineering_logs_dir
-from src.features.engineering.paths import get_engineering_sql_dir
-from src.features.engineering.logging_config import get_logger
-from src.features.engineering.logging_config import setup_logging
-from src.features.engineering.aggregation.static_features.static import run_static_aggregate
-from src.features.engineering.aggregation.window_features.window import render_and_run_all
-from src.features.engineering.pipeline.database import create_pipeline_engine
-from src.features.engineering.pipeline.database import validate_source_tables
-from src.features.engineering.pipeline.dates import resolve_month_plan
-from src.features.engineering.pipeline.schema import count_static_customers
-from src.features.engineering.pipeline.schema import reset_pipeline_schemas
+from features.engineering.aggregation.static import run_static_aggregate
+from features.engineering.aggregation.window.window import render_and_run_all
+from features.engineering.config.app_config import get_config
+from features.engineering.logging_config import get_logger, setup_logging
+from features.engineering.paths import get_engineering_logs_dir, get_engineering_sql_dir
+from features.engineering.pipeline.database import create_pipeline_engine, validate_source_tables
+from features.engineering.pipeline.dates import resolve_month_plan
+from features.engineering.pipeline.schema import count_static_customers, reset_pipeline_schemas
 
 logger = get_logger("pipeline_main")
 

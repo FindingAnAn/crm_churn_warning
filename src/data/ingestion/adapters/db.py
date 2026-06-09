@@ -1,0 +1,26 @@
+"""Ingestion resources/db.py — thin wrapper around centralized config.
+
+This file delegates to settings.database.PostgresConfig to avoid
+duplicating the PostgresConfig dataclass and hardcoded credentials.
+
+"""
+
+import psycopg2
+
+# Re-export from centralized config for backward compatibility
+from settings.database import PostgresConfig
+
+
+def get_pg_conn(cfg: PostgresConfig, *, autocommit: bool = False):
+    """Get a psycopg2 connection from PostgresConfig.
+
+    Args:
+        cfg: PostgresConfig instance (use ``PostgresConfig.from_env()``).
+        autocommit: Enable autocommit mode.
+
+    Returns:
+        psycopg2 connection.
+    """
+    conn = psycopg2.connect(cfg.dsn())
+    conn.autocommit = autocommit
+    return conn

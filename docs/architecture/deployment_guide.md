@@ -75,7 +75,7 @@ helm repo update
 # Ánh xạ cổng để truy cập UI ở http://localhost:8080 (Tài khoản: admin / admin)
 kubectl port-forward svc/airflow-api-server 8080:8080 -n default
 ```
-Khi bạn bật DAG (vd: `ds_churn_pipeline`), K8s sẽ tự động sinh ra các Pod độc lập (tên dạng `churn-pipeline-v2-pod-xxxxx`) để chạy task tính toán và tắt đi sau khi hoàn tất.
+Khi bạn bật DAG (ví dụ `ds_churn_pipeline`), K8s sẽ tạo Pod độc lập có tên dạng `churn-pipeline-pod-xxxxx` và xóa Pod sau khi task hoàn tất.
 
 > [!NOTE]
 > Lưu ý về OS Path: Không hard-code `host_path` trong DAG. Cấu hình qua Airflow Variable hoặc biến môi trường `CHURN_DATA_HOST_PATH`; nếu test local trên Docker Desktop Windows thì giá trị thường có dạng Linux-node như `/run/desktop/mnt/host/d/...`.

@@ -1,10 +1,10 @@
 """Template loading and rendering engine for SQL assets."""
 
 from __future__ import annotations
-from pathlib import Path
+
 from typing import Any
 
-from src.features.engineering.paths import get_engineering_sql_dir
+from features.engineering.paths import get_engineering_sql_dir
 
 SQL_DIR = get_engineering_sql_dir()
 

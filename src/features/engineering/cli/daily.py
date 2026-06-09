@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+
 def _find_repo_root() -> Path:
     current = Path(__file__).resolve()
     for candidate in current.parents:
@@ -16,8 +17,7 @@ REPO_ROOT = _find_repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.features.engineering.pipeline.pipeline import run
-
+from features.engineering.pipeline.pipeline import run
 
 if __name__ == "__main__":
     args = SimpleNamespace(

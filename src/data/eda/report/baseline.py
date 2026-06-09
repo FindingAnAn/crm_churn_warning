@@ -2,7 +2,7 @@
 
 Save a "healthy" reference state and compare future runs against it.
 
-``data.preprocessing.dataset_prep.prototype_cache``.
+``data.preprocessing.training_dataset.prototype_cache``.
 """
 
 from __future__ import annotations

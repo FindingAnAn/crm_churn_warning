@@ -8,8 +8,7 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from pendulum import datetime
-
-from common import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
+from runtime_config import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
 
 # Housekeeping script nội dung
 HOUSEKEEPING_SCRIPT = '''

@@ -194,8 +194,8 @@ def main() -> int:
 
         load_dotenv()
 
-        from config.db_config import PostgresConfig
-        from shared.db import get_engine
+        from settings.database import PostgresConfig
+        from core.database import get_engine
 
         logger.info("=" * 70)
         logger.info("EDA Module — Starting")

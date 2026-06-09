@@ -55,7 +55,7 @@ Dành cho DevOps tìm lỗi K8s API hay Scheduler:
 ### Khối Giám Sát Ứng dụng & Luồng Data (Tầng Compute Resources)
 Dành cho bạn - Nhóm Kỹ sư Dữ liệu tối ưu Airflow và XGBoost:
 - **Kubernetes / Compute Resources / Namespace (Pods) (⭐ KİM CHỈ NAM):** Nắm bắt toàn cảnh sự bào mòn tài nguyên của "đại bản doanh" Airflow. Lọc góc trái từ `namespace=All` thành `namespace=default` để check độ "ngốn" cấu hình của dự án mình.
-- **Kubernetes / Compute Resources / Pod (⭐ PHẪU THUẬT ML TASK):** Check "kính hiển vi" vào một task cụ thể. Khi XGBoost (File `monthly_v2_cli`) chạy lúc nửa đêm ngốn bao nhiêu Memory, dashboard này sẽ hiển thị tường tận.
+- **Kubernetes / Compute Resources / Pod:** Theo dõi RAM/CPU của task XGBoost chạy qua `pipelines.churn.cli`.
 - **Hàng loạt các bảng Network / Computing khác (Workload, Cluster, Persistent Volumes):** Rất đa mục đích để kiểm tra dung lượng ổ đĩa của Log hay băng thông tải file CSV.
 
 ---
@@ -87,7 +87,7 @@ kube_pod_status_phase{namespace="default", phase=~"Failed|Pending"} > 0
 ```promql
 sum(container_memory_usage_bytes{namespace="default", pod=~"churn-pipeline-.*"}) by (pod)
 ```
-- **Tại sao dùng:** Câu lệnh thần thánh rà quét tất cả các Pod tên bắt đầu bằng `churn-pipeline-v2...`. Nhờ nó, bạn tính được dung lượng RAM trung bình thuật toán cần xài mỗi lần train.
+- **Tại sao dùng:** Truy vấn các Pod có tên bắt đầu bằng `churn-pipeline-` để ước lượng RAM trung bình cho mỗi lần train.
 - **Khi nào dùng:** Mở Cổng 9090 Gõ xem thử trước triển khai (sizing estimation) để báo IT sếp sắm máy chủ 16GB hay 32GB RAM thì an toàn.
 
 ### Q3: Tín hiệu sống còn của hệ sinh thái (Airflow Health)

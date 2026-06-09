@@ -1,7 +1,7 @@
 """Month-over-month feature drift using PSI and KS.
 
 Reuses statistical primitives from the monitoring layer:
-``monitoring.model_quality.monitoring.psi``.
+``monitoring.model_quality.psi``.
 
 """
 
@@ -11,7 +11,7 @@ import logging
 
 import pandas as pd
 
-from monitoring.model_quality.monitoring.psi import (
+from monitoring.model_quality.psi import (
     counts_on_profile,
     discrete_ks_from_counts,
     make_numeric_profile,

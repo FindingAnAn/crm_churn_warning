@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from src.shared.logging_config import configure_logging
-from src.shared.logging_config import get_logger as _get_logger
-from src.features.engineering.paths import get_engineering_logs_dir
+from core.logging import configure_logging
+from core.logging import get_logger as _get_logger
+from features.engineering.paths import get_engineering_logs_dir
 
 LOG_DIR = get_engineering_logs_dir()
 

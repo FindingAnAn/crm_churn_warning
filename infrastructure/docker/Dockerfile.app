@@ -44,6 +44,7 @@ COPY --from=builder --chown=appuser:appgroup /root/.local /home/appuser/.local
 
 # Copy application source code
 COPY --chown=appuser:appgroup src/ ./src/
+COPY --chown=appuser:appgroup scripts/ ./scripts/
 
 # Ensure logs directory exists and appuser has permissions for /app
 RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
@@ -54,5 +55,5 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD python -c "import psycopg2" || exit 1
 
-ENTRYPOINT ["python", "-m"]
-CMD ["src.scripts.check_db_status"]
+ENTRYPOINT ["python"]
+CMD ["scripts/database/check_db_status.py"]

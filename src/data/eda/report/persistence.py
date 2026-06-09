@@ -1,6 +1,6 @@
 """Persist EDA report to PostgreSQL.
 
-``monitoring.model_quality.monitoring.drift.upsert_feature_drift``.
+``monitoring.model_quality.drift.upsert_feature_drift``.
 """
 
 from __future__ import annotations

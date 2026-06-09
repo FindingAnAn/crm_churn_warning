@@ -11,8 +11,7 @@ from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from pendulum import datetime
-
-from common import churn_data_mount, churn_data_volume, db_secret_ref
+from runtime_config import churn_data_mount, churn_data_volume, db_secret_ref, get_setting
 
 with DAG(
     dag_id="ds_churn_ingest",
@@ -25,30 +24,21 @@ with DAG(
 ) as dag:
     volume = churn_data_volume()
     volume_mount = churn_data_mount()
+    data_root = volume_mount.mount_path
 
-    ingest_scan_and_load = KubernetesPodOperator(
-        task_id="ingest_scan_and_load_k8s",
+    run_ingestion = KubernetesPodOperator(
+        task_id="scan_and_ingest",
         name="churn-ingestion-pod",
         namespace="default",
         image="churn_app:latest",
         image_pull_policy="IfNotPresent",
-        cmds=["python", "-m", "data.ingestion.jobs.ingest_zip_job"],
-        env_vars={"TZ": "Asia/Ho_Chi_Minh"},
-        env_from=db_secret_ref(),
-        volumes=[volume],
-        volume_mounts=[volume_mount],
-        is_delete_operator_pod=True,
-        get_logs=True,
-    )
-
-    validate_data = KubernetesPodOperator(
-        task_id="validate_data_k8s",
-        name="churn-ingestion-validate-pod",
-        namespace="default",
-        image="churn_app:latest",
-        image_pull_policy="IfNotPresent",
-        cmds=["python", "-m", "data.ingestion.ops.post_ingest_maintenance"],
-        env_vars={"TZ": "Asia/Ho_Chi_Minh"},
+        cmds=["python", "-m", "data.ingestion.scanner"],
+        env_vars={
+            "TZ": "Asia/Ho_Chi_Minh",
+            "INCOMING_DIR": get_setting("INCOMING_DIR", f"{data_root}/incoming"),
+            "SAVED_DIR": get_setting("SAVED_DIR", f"{data_root}/saved"),
+            "FAIL_DIR": get_setting("FAIL_DIR", f"{data_root}/failed"),
+        },
         env_from=db_secret_ref(),
         volumes=[volume],
         volume_mounts=[volume_mount],
@@ -78,6 +68,5 @@ with DAG(
         reset_dag_run=True,
     )
 
-    # Flow: Ingest -> Validate -> Trigger Features + EDA in parallel
-    ingest_scan_and_load >> validate_data >> [trigger_features, trigger_eda]
+    run_ingestion >> [trigger_features, trigger_eda]
 
