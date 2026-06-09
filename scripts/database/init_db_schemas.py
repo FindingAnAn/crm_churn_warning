@@ -29,8 +29,8 @@ def init_schemas() -> None:
     """Initialize all required schemas and tables."""
     load_dotenv()
 
-    from settings.database import PostgresConfig
     from core.database import get_engine
+    from settings.database import PostgresConfig
 
     cfg = PostgresConfig.from_env()
     engine = get_engine(cfg)

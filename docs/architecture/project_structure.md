@@ -29,6 +29,8 @@ crm_churn_warning/
 | Area | Location | Rule |
 |---|---|---|
 | DAG orchestration | `dags/` | Thin entrypoints. No business logic. |
+| Application settings | `src/settings/` | Typed environment-backed settings. |
+| Shared infrastructure | `src/core/` | Database and logging primitives. |
 | Data ingestion | `src/data/ingestion/` | ZIP scan, validation, DB load. |
 | Training dataset | `src/data/preprocessing/training_dataset/` | Time-aware labels, split, weights. |
 | Feature generation | `src/features/engineering/` | PostgreSQL/Spark feature build logic. |

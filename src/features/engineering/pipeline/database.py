@@ -6,9 +6,9 @@ import os
 
 from sqlalchemy import create_engine, text
 
-from settings.database import PostgresConfig
 from features.engineering.database_utils import ensure_public_table_columns_exist, ensure_public_tables_exist
 from features.engineering.logging_config import get_logger
+from settings.database import PostgresConfig
 
 logger = get_logger("pipeline_database")
 

@@ -1,4 +1,4 @@
-# jobs/ingest_zip_job.py (refactored for 4 new tables + error handling)
+"""Ingest one ZIP archive into production tables."""
 from __future__ import annotations
 
 import os

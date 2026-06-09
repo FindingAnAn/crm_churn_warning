@@ -1,4 +1,4 @@
-# sensors/incoming_zip_sensor.py
+"""One-shot scanner for incoming ZIP data."""
 from __future__ import annotations
 
 from core.logging import get_logger

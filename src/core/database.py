@@ -1,11 +1,4 @@
-"""Database connection factories.
-
-Merges duplicated logic from:
-  - Ingestion/Data_pull/resources/db.py
-  - Preprocess/libs/database.py
-  - Modeling/infra/db.py
-
-"""
+"""Shared PostgreSQL connection factories."""
 
 from __future__ import annotations
 

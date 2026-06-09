@@ -33,10 +33,10 @@ def main() -> int:
 
         load_dotenv()
 
-        from settings.database import PostgresConfig
         from core.database import get_engine
         from data.preprocessing.training_dataset.pipeline_config import DatasetPipelineConfig
         from pipelines.churn.pipeline import run_churn_pipeline
+        from settings.database import PostgresConfig
 
         logger.info("=" * 70)
         logger.info("Churn Pipeline - Starting")

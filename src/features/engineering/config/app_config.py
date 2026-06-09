@@ -6,7 +6,7 @@ from typing import Optional
 Application Configuration
 
 Centralized configuration management for the engineering feature pipeline.
-Follows the configuration conventions from Coding_conventions/02-Config_conventions.md
+Follows the configuration conventions from docs/conventions/02-Config_conventions.md
 
 This module provides:
 - Strongly typed config objects for each subsystem

@@ -866,9 +866,9 @@ pytest tests/test_guardrail.py -v
 
 ### 11.1 Coding Conventions
 
-Dự án tuân thủ **18 file coding conventions** trong thư mục `Coding_conventions/`. Trước khi viết code, **bắt buộc** đọc:
+Dự án tuân thủ các coding convention trong thư mục `docs/conventions/`. Trước khi viết code, đọc:
 
-1. `Coding_conventions/00-Index_and_glossary.md` — Mục lục + hướng dẫn đọc theo loại task
+1. `docs/conventions/00-Index_and_glossary.md` — Mục lục và hướng dẫn đọc theo loại task
 2. File convention tương ứng với task (xem §4 trong file mục lục)
 
 ### 11.2 Workflow phát triển
@@ -932,7 +932,7 @@ dags/CLI → pipelines → data/features/modeling
 | **Performance Reports** | [`docs/models/performance_reports.md`](docs/models/performance_reports.md) | Kết quả đánh giá model |
 | **ADRs** | [`docs/adr/`](docs/adr/) | Architecture Decision Records |
 | **API Spec** | [`docs/api/api_spec.yaml`](docs/api/api_spec.yaml) | OpenAPI specification |
-| **Coding Conventions** | [`Coding_conventions/00-Index_and_glossary.md`](Coding_conventions/00-Index_and_glossary.md) | Quy ước coding toàn dự án |
+| **Coding Conventions** | [`docs/conventions/00-Index_and_glossary.md`](docs/conventions/00-Index_and_glossary.md) | Quy ước coding toàn dự án |
 
 ---
 

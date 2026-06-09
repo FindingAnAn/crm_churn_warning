@@ -1,4 +1,5 @@
-# resources/fs.py
+"""Filesystem adapter for incoming ZIP data."""
+
 import os
 import re
 from dataclasses import dataclass

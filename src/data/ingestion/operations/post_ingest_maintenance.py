@@ -1,4 +1,4 @@
-# ops/post_ingest_maintenance.py
+"""Run post-ingestion database maintenance."""
 from __future__ import annotations
 
 from pathlib import Path

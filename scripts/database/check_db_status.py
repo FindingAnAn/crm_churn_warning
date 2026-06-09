@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 from sqlalchemy import text
 
-from settings.database import PostgresConfig
 from core.database import get_engine
+from settings.database import PostgresConfig
 
 load_dotenv()
 

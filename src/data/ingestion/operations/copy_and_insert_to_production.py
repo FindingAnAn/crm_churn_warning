@@ -1,4 +1,4 @@
-# ops/copy_and_insert_to_production.py
+"""Transform CSV rows and load production tables."""
 from __future__ import annotations
 
 import csv
