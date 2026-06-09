@@ -231,7 +231,7 @@ ds_churn/
 ├── src/                            # Source code (pip install -e .)
 │   ├── settings/                   #   Typed application configuration
 │   │   ├── application.py          #     Root AppSettings
-│   │   ├── database.py             #     PostgresConfig (PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PW)
+│   │   ├── database.py             #     PostgresConfig (PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PASSWORD)
 │   │   └── paths.py                #     FSConfig (INCOMING/SAVED/FAIL_DIR) + ModelPathsConfig
 │   ├── core/                       #   Database and logging infrastructure
 │   ├── data/
@@ -626,7 +626,7 @@ pytest
 | `PG_PORT` | ❌ | `5432` | PostgreSQL port |
 | `PG_DB` | ✅ | — | Database name |
 | `PG_USER` | ✅ | — | Database user |
-| `PG_PW` | ✅ | — | Database password |
+| `PG_PASSWORD` | ✅ | — | Database password |
 | **File System** | | | |
 | `INCOMING_DIR` | ❌ | `/churn_data/incoming` | Thư mục chứa ZIP files đầu vào |
 | `SAVED_DIR` | ❌ | `/churn_data/saved` | Thư mục lưu data đã xử lý thành công |

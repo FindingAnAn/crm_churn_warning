@@ -22,7 +22,7 @@ class TestPostgresConfig:
             "PG_PORT": "5433",
             "PG_DB": "testdb",
             "PG_USER": "testuser",
-            "PG_PW": "testpass",
+            "PG_PASSWORD": "testpass",
         }
         with patch.dict(os.environ, env, clear=False):
             cfg = PostgresConfig.from_env()
@@ -41,7 +41,7 @@ class TestPostgresConfig:
                 PostgresConfig.from_env()
 
     def test_from_env_missing_password_raises(self):
-        """from_env() should raise if PG_PW is not set."""
+        """from_env() should raise if PG_PASSWORD is not set."""
         env = {
             "PG_HOST": "h",
             "PG_PORT": "5432",

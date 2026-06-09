@@ -1,5 +1,7 @@
 """File system path configuration.
 
+Provides strongly-typed path configuration for data ingestion and model storage.
+Separation of config from bootstrap: validation does NOT create directories.
 """
 
 from __future__ import annotations
@@ -14,9 +16,9 @@ class FSConfig:
     """File system paths for the ingestion pipeline.
 
     Attributes:
-        incoming_dir: Directory where incoming ZIP files are received.
+        incoming_dir: Directory for new/unprocessed data files.
         saved_dir: Directory for successfully processed data.
-        fail_dir: Directory for data that failed processing.
+        fail_dir: Directory for data that failed validation/processing.
     """
 
     incoming_dir: Path
@@ -27,8 +29,14 @@ class FSConfig:
     def from_env(cls) -> FSConfig:
         """Load paths from environment variables.
 
-        Required env vars:
+        Required environment variables:
             INCOMING_DIR, SAVED_DIR, FAIL_DIR
+
+        Returns:
+            FSConfig instance with paths loaded from environment.
+
+        Raises:
+            OSError: If any required path variable is missing.
         """
         return cls(
             incoming_dir=_get_required_path("INCOMING_DIR"),
@@ -40,7 +48,11 @@ class FSConfig:
         """Validate that path values are non-empty.
 
         NOTE: Does NOT check existence or create directories.
-              That belongs in bootstrap code (02-Config §10.2).
+              That belongs in bootstrap code (see docs/conventions/02-Config_conventions.md §10.2).
+              This method only validates the configuration, not system state.
+
+        Raises:
+            ValueError: If any path is empty.
         """
         for field_name in ("incoming_dir", "saved_dir", "fail_dir"):
             value = getattr(self, field_name)
@@ -55,6 +67,15 @@ class FSConfig:
             "fail_dir": str(self.fail_dir),
         }
 
+    def __repr__(self) -> str:
+        """Safe string representation for logging."""
+        return (
+            f"FSConfig("
+            f"incoming_dir={self.incoming_dir!r}, "
+            f"saved_dir={self.saved_dir!r}, "
+            f"fail_dir={self.fail_dir!r})"
+        )
+
 
 @dataclass(frozen=True)
 class ModelPathsConfig:
@@ -62,7 +83,7 @@ class ModelPathsConfig:
 
     Attributes:
         model_dir: Root directory for model bundles and artifacts.
-        logs_dir: Directory for pipeline logs.
+        logs_dir: Directory for pipeline logs and output.
     """
 
     model_dir: Path
@@ -70,16 +91,32 @@ class ModelPathsConfig:
 
     @classmethod
     def from_env(cls) -> ModelPathsConfig:
-        """Load paths from environment variables."""
+        """Load paths from environment variables.
+
+        Environment variables (with safe defaults for local development):
+            CHURN_MODEL_DIR: Root for model bundles (default: ./model_bundles)
+            LOGS_DIR: Root for logs (default: ./logs)
+
+        Returns:
+            ModelPathsConfig instance with values from environment.
+        """
         return cls(
             model_dir=Path(os.getenv("CHURN_MODEL_DIR", "./model_bundles")),
             logs_dir=Path(os.getenv("LOGS_DIR", "./logs")),
         )
 
     def validate(self) -> None:
-        """Validate path values are non-empty."""
+        """Validate that path values are non-empty.
+
+        NOTE: Does NOT create directories. Use ensure_directories() in bootstrap code.
+
+        Raises:
+            ValueError: If any path is empty.
+        """
         if not str(self.model_dir).strip():
             raise ValueError("ModelPathsConfig.model_dir must not be empty.")
+        if not str(self.logs_dir).strip():
+            raise ValueError("ModelPathsConfig.logs_dir must not be empty.")
 
     def to_safe_dict(self) -> dict[str, str]:
         """Return config as a dict safe for logging."""
@@ -88,15 +125,52 @@ class ModelPathsConfig:
             "logs_dir": str(self.logs_dir),
         }
 
+    def __repr__(self) -> str:
+        """Safe string representation for logging."""
+        return (
+            f"ModelPathsConfig("
+            f"model_dir={self.model_dir!r}, "
+            f"logs_dir={self.logs_dir!r})"
+        )
 
+
+# ── Bootstrap helpers ──────────────────────────────────────────────
 def ensure_directories(*paths: Path) -> None:
     """Bootstrap helper: create directories if they don't exist.
 
     This is intentionally separated from config validation
-    per convention 02-Config §10.2.
+    per convention docs/conventions/02-Config_conventions.md §10.2.
+
+    Validation checks correctness. Bootstrap/initialization prepares system state.
+    They must not be mixed.
+
+    Args:
+        *paths: Variable number of Path objects to create.
     """
     for path in paths:
         path.mkdir(parents=True, exist_ok=True)
+
+
+# ── Private helpers ────────────────────────────────────────────────
+def _get_required_path(env_var_name: str) -> Path:
+    """Helper: Get required path from environment variable.
+
+    Args:
+        env_var_name: Name of environment variable.
+
+    Returns:
+        Path object from environment.
+
+    Raises:
+        OSError: If environment variable is not set or empty.
+    """
+    value = os.getenv(env_var_name)
+    if not value:
+        raise OSError(
+            f"Required environment variable not set: {env_var_name}. "
+            f"Set it in .env or export before running."
+        )
+    return Path(value)
 
 
 def _get_required_path(env_name: str) -> Path:

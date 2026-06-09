@@ -32,7 +32,7 @@
 - **Nguyên nhân:** Khi 1 task kết thúc, Worker Pod đó bị K8s xóa. Trong khi chạy local, hệ thống lại chưa có kho chứa Log riêng nên Webserver mò tìm vào đúng cái IP của Pod đã biến mất.
 - **Cách xử lý:** Phải sửa cấu hình Helm (`values-local.yaml`) bật Persistent Volume cho Log (`logs.persistence.enabled: true`).
 
-### Lỗi: KPO báo `Missing required environment variables: PG_USER and PG_PW`
+### Lỗi: KPO báo `Missing required environment variables: PG_USER and PG_PASSWORD`
 - **Dấu hiệu:** Task Ingest / Pipeline thất bại ngay từ giây đầu tiên vì không gọi được Database.
 - **Nguyên nhân:** DAG gọi KPO pod ra là một container mới hoàn toàn (trống rỗng), không có `.env` file bên cạnh như chạy local script.
 - **Cách xử lý:** Khởi tạo DB Crentials thành 1 cái Secrets trong cụm K8s (`kubectl create secret generic churn-db-secret --from-env-file=".env"`). Xong xuôi, tại KubernetesPodOperator, inject secret đố vào Pod = `env_from=[k8s.V1EnvFromSource(secret_ref=...)]`. 

@@ -6,12 +6,23 @@ import os
 
 from features.engineering.paths import get_engineering_root, get_repo_root
 
+try:
+    from config.settings import get_config
+    _has_config = True
+except ImportError:
+    _has_config = False
+
 ENGINEERING_ROOT = get_engineering_root()
 REPO_ROOT = get_repo_root()
 ENV_FILES = [ENGINEERING_ROOT / ".env", REPO_ROOT / ".env"]
 
 
 def load_project_env_files() -> None:
+    """Load environment variables from .env files (legacy support).
+    
+    Note: Prefer using config.settings module for new code.
+    This function is kept for backward compatibility.
+    """
     loaded_values: dict[str, str] = {}
     for file_path in ENV_FILES:
         if not file_path.exists():
@@ -33,6 +44,37 @@ def load_project_env_files() -> None:
 
 
 def require_env(name: str) -> str:
+    """Get required environment variable.
+    
+    Tries to get from config.settings first, then environment.
+    
+    Args:
+        name: Environment variable name.
+        
+    Returns:
+        The environment variable value.
+        
+    Raises:
+        RuntimeError: If the variable is not set or empty.
+    """
+    # Try config first if available
+    if _has_config:
+        try:
+            cfg = get_config()
+            # Map common config paths
+            config_mapping = {
+                "FEATURE_ENGINE": "features.engine",
+                "BUILD_LIFETIME_ASOF": "features.build_lifetime_asof",
+                "FEATURE_START_DATE": "features.feature_start_date",
+            }
+            if name in config_mapping:
+                value = cfg.get(config_mapping[name])
+                if value:
+                    return str(value)
+        except Exception:
+            pass
+    
+    # Fall back to environment
     value = os.getenv(name)
     if value is None or value.strip() == "":
         raise RuntimeError(f"Missing required environment variable: {name}")
